@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="popup-layout.css" />
     <link rel="stylesheet" href="popup-controls.css" />
     <link rel="stylesheet" href="popup-analysis.css" />
+    <link rel="stylesheet" href="popup-stats.css" />
   </head>
   <body>
     <div class="popup-shell">
@@ -23,11 +24,74 @@
         <!-- Ana ekran -->
         <div id="mainView" class="view">
           <p id="usageText" class="usage-text"></p>
+          <!-- Daily Report Card -->
+          <div id="dailyReportCard" class="daily-report-card hidden">
+            <p class="daily-report-title" id="dailyReportTitle"></p>
+            <p class="daily-report-line" id="dailyReportLine1"></p>
+            <p class="daily-report-line" id="dailyReportLine2"></p>
+            <button id="dailyReportDetailsBtn" type="button" class="daily-report-link" aria-label="Detaylı istatistikler"></button>
+          </div>
+          <!-- Streak Widget -->
+          <div id="streakWidget" class="streak-widget hidden">
+            <span class="streak-fire" id="streakIcon"></span>
+            <span class="streak-text" id="streakText"></span>
+            <span class="streak-best" id="streakBest"></span>
+          </div>
           <button id="summarizeBtn" class="btn btn-primary">&Ouml;zetle</button>
+          <button id="statsBtn" type="button" class="btn-stats">&#128202; İstatistiklerim</button>
           <div id="historySection" class="history-panel hidden">
             <h3 id="historyLabel" class="history-label">Son &Ouml;zetler</h3>
             <ul id="historyList"></ul>
           </div>
+        </div>
+
+        <!-- Stats View -->
+        <div id="statsView" class="view hidden">
+          <h3 class="stats-view-title" id="statsViewTitle">İstatistiklerim</h3>
+
+          <!-- Streak Section -->
+          <div class="stats-streak-section" id="statsStreakSection">
+            <div class="stats-streak-row">
+              <span class="streak-fire" id="statsStreakIcon"></span>
+              <span id="statsStreakText"></span>
+            </div>
+            <div class="stats-streak-bar-wrap">
+              <div class="stats-streak-bar" id="statsStreakBar"></div>
+            </div>
+            <p class="stats-streak-best" id="statsStreakBest"></p>
+          </div>
+
+          <!-- Weekly Numbers -->
+          <div class="stats-card" id="statsWeeklyCard">
+            <p class="section-label" id="statsWeeklyLabel"></p>
+            <p class="stats-line" id="statsArticles"></p>
+            <p class="stats-line" id="statsAnalyses"></p>
+            <p class="stats-line" id="statsQuestions"></p>
+            <p class="stats-line" id="statsVotes"></p>
+          </div>
+
+          <!-- Bias Map -->
+          <div class="stats-card" id="statsBiasCard">
+            <p class="section-label" id="statsBiasTitle"></p>
+            <div id="statsBiasContent"></div>
+          </div>
+
+          <!-- Top Sources -->
+          <div class="stats-card" id="statsSourcesCard">
+            <p class="section-label" id="statsSourcesTitle"></p>
+            <div id="statsSourcesList"></div>
+          </div>
+
+          <!-- Source Profiles -->
+          <div class="stats-card" id="statsSourceProfilesCard">
+            <p class="section-label" id="statsSourceProfilesTitle"></p>
+            <div id="statsSourceProfilesList"></div>
+          </div>
+
+          <!-- No data message -->
+          <p id="statsNoData" class="stats-no-data hidden"></p>
+
+          <button id="statsBackBtn" class="btn btn-secondary">Geri</button>
         </div>
 
         <!-- Yukleniyor -->
@@ -119,6 +183,7 @@
     <script src="../utils/client-state.js"></script>
     <script src="../utils/ui-common.js"></script>
     <script src="../utils/summary-surface.js"></script>
+    <script src="../utils/stats-engine.js"></script>
     <script src="../utils/app-core.js"></script>
     <script src="popup-ui.js"></script>
     <script src="popup.js"></script>

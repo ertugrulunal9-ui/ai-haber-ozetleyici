@@ -121,6 +121,9 @@ async function handleSidebarBackClick(state) {
   state.currentItem = null;
   const history = await loadHistory(state);
   sidebarUi.showSidebarView(state.refs, state.currentRemaining === 0 && history.length === 0 ? "limit" : "main");
+  renderSidebarStreak(state);
+  renderSidebarDailyReport(state);
+  renderSidebarSourceBadge(state);
 }
 
 async function handleSidebarSummarize(state) {
@@ -278,12 +281,207 @@ function handleSidebarPremiumClick() {
   // Premium not yet available — button is hidden
 }
 
+// ── Phase 1: Sidebar Stats, Streak, Daily Report, Source Badge ───────
+
+async function renderSidebarStreak(state) {
+  const clientState = globalThis.AozClientState;
+  const streak = await clientState.getStreak();
+  if (!streak || streak.current === 0) {
+    state.refs.streakWidget.classList.add("aoz-hidden");
+    return;
+  }
+  state.refs.streakFire.textContent = "\u{1F525}";
+  state.refs.streakText.textContent = state.t.streak_label(streak.current);
+  state.refs.streakBest.textContent = state.t.streak_best(streak.longest);
+  state.refs.streakWidget.classList.remove("aoz-hidden");
+  if (streak.current >= 7) {
+    state.refs.streakWidget.classList.add("aoz-streak-hot");
+  } else {
+    state.refs.streakWidget.classList.remove("aoz-streak-hot");
+  }
+}
+
+async function renderSidebarDailyReport(state) {
+  const clientState = globalThis.AozClientState;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yKey = yesterday.toISOString().slice(0, 10);
+  const yStats = await clientState.getDailyStats(yKey);
+
+  if (!yStats || yStats.articlesRead === 0) {
+    state.refs.dailyReport.classList.add("aoz-hidden");
+    return;
+  }
+
+  state.refs.dailyReportTitle.textContent = state.t.daily_report_title;
+  state.refs.dailyReportLine1.textContent = state.t.daily_report_yesterday(yStats.articlesRead);
+
+  const sources = yStats.sources || {};
+  const topSource = Object.entries(sources).sort((a, b) => b[1] - a[1])[0];
+  state.refs.dailyReportLine2.textContent = topSource
+    ? state.t.daily_report_top_source(topSource[0], topSource[1])
+    : "";
+
+  state.refs.dailyReportLink.textContent = `${state.t.daily_report_details} \u2192`;
+  state.refs.dailyReport.classList.remove("aoz-hidden");
+}
+
+async function renderSidebarSourceBadge(state) {
+  const clientState = globalThis.AozClientState;
+  const statsEngine = globalThis.AozStatsEngine;
+  if (!state.baseArticle?.url) return;
+
+  try {
+    const hostname = new URL(state.baseArticle.url).hostname.replace(/^www\./, "");
+    const profiles = await clientState.getSourceProfiles();
+    const profile = profiles[hostname];
+    const labels = statsEngine.getSourceBiasLabel(profile, state.lang);
+
+    if (!labels) {
+      state.refs.sourceBadge.classList.add("aoz-hidden");
+      return;
+    }
+
+    state.refs.sourceBadgeName.textContent = `${hostname} \u00B7 ${state.t.source_reads(profile.totalReads)}`;
+    state.refs.sourceBadgeBias.textContent = labels.political;
+    state.refs.sourceBadgeEmoBar.style.width = `${labels.emotionalValue}%`;
+    state.refs.sourceBadge.classList.remove("aoz-hidden");
+  } catch {
+    state.refs.sourceBadge.classList.add("aoz-hidden");
+  }
+}
+
+async function handleSidebarStatsClick(state) {
+  const clientState = globalThis.AozClientState;
+  const statsEngine = globalThis.AozStatsEngine;
+
+  const streak = await clientState.getStreak();
+  const weekly = await clientState.getWeeklyStats();
+  const sourceProfiles = await clientState.getSourceProfiles();
+  let dailyStats = {};
+  try { ({ dailyStats = {} } = await chrome.storage.local.get("dailyStats")); }
+  catch { /* context invalidated */ }
+
+  const hasData = weekly.totalArticles > 0;
+
+  state.refs.statsTitle.textContent = state.t.stats_title;
+  state.refs.statsBackButton.textContent = state.t.back;
+
+  if (!hasData) {
+    state.refs.statsNoData.textContent = state.t.stats_no_data;
+    state.refs.statsNoData.classList.remove("aoz-hidden");
+    state.refs.statsStreakSection.classList.add("aoz-hidden");
+    state.refs.statsWeekly.classList.add("aoz-hidden");
+    state.refs.statsBias.classList.add("aoz-hidden");
+    state.refs.statsSources.classList.add("aoz-hidden");
+    state.refs.statsProfiles.classList.add("aoz-hidden");
+    sidebarUi.showSidebarView(state.refs, "stats");
+    return;
+  }
+
+  state.refs.statsNoData.classList.add("aoz-hidden");
+
+  // Streak
+  if (streak.current > 0) {
+    state.refs.statsStreakIcon.textContent = "\u{1F525}";
+    state.refs.statsStreakText.textContent = state.t.streak_label(streak.current);
+    const pct = Math.min(100, (streak.current / Math.max(streak.longest, 1)) * 100);
+    state.refs.statsStreakBar.style.width = `${pct}%`;
+    state.refs.statsStreakBest.textContent = state.t.streak_best(streak.longest);
+    state.refs.statsStreakSection.classList.remove("aoz-hidden");
+  } else {
+    state.refs.statsStreakSection.classList.add("aoz-hidden");
+  }
+
+  // Weekly
+  state.refs.statsWeeklyLabel.textContent = state.t.stats_this_week;
+  state.refs.statsArticles.textContent = state.t.stats_articles(weekly.totalArticles);
+  state.refs.statsAnalyses.textContent = state.t.stats_analyses(weekly.totalAnalyses);
+  state.refs.statsQuestions.textContent = state.t.stats_questions(weekly.totalQuestions);
+  state.refs.statsVotes.textContent = state.t.stats_votes(weekly.totalVotes);
+  state.refs.statsWeekly.classList.remove("aoz-hidden");
+
+  // Bias map
+  const biasData = statsEngine.computeDailyBiasAverages(dailyStats, 7);
+  const hasAnyBias = biasData.some((d) => d.count > 0);
+  if (hasAnyBias) {
+    state.refs.statsBiasTitle.textContent = state.t.bias_map_title;
+    const allReadings = weekly.biasReadings;
+    const avgP = allReadings.length > 0
+      ? allReadings.reduce((s, r) => s + r.political, 0) / allReadings.length
+      : null;
+    const avgE = allReadings.length > 0
+      ? allReadings.reduce((s, r) => s + r.emotional, 0) / allReadings.length
+      : null;
+
+    let html = `<p class="aoz-stats-bias-desc">${state.t.bias_map_desc}</p>`;
+
+    if (avgP !== null) {
+      const pLabel = statsEngine.computeBiasLabel(avgP, state.lang);
+      const eLabel = statsEngine.computeEmotionalLabel(avgE, state.lang);
+      const pLeft = (((avgP + 100) / 200) * 100).toFixed(1);
+
+      html += `<p class="aoz-stats-bias-label">${state.t.bias_map_political_trend}: <strong>${pLabel}</strong></p>`;
+      html += `<div class="aoz-bias-bar aoz-political-bar" style="margin-bottom:10px"><div class="aoz-bias-dot" style="left:${pLeft}%"></div></div>`;
+      html += `<p class="aoz-stats-bias-label">${state.t.bias_map_emotional_trend}: <strong>${eLabel}</strong></p>`;
+      html += `<div class="aoz-bias-bar aoz-emotional-bar"><div class="aoz-bias-dot" style="left:${avgE.toFixed(1)}%"></div></div>`;
+    }
+
+    state.refs.statsBiasContent.innerHTML = html;
+    state.refs.statsBias.classList.remove("aoz-hidden");
+  } else {
+    state.refs.statsBias.classList.add("aoz-hidden");
+  }
+
+  // Top sources
+  const topSources = statsEngine.computeTopSources(weekly.sources, 5);
+  if (topSources.length > 0) {
+    state.refs.statsSourcesTitle.textContent = state.t.stats_top_sources;
+    state.refs.statsSourcesList.innerHTML = topSources
+      .map((s) => `<div class="aoz-stats-source-row"><span class="aoz-stats-source-name">${s.name}</span><span class="aoz-stats-source-count">(${s.count})</span></div>`)
+      .join("");
+    state.refs.statsSources.classList.remove("aoz-hidden");
+  } else {
+    state.refs.statsSources.classList.add("aoz-hidden");
+  }
+
+  // Source profiles
+  const profileEntries = Object.entries(sourceProfiles)
+    .filter(([, p]) => p.totalBiasAnalyses >= 3)
+    .sort((a, b) => b[1].totalReads - a[1].totalReads)
+    .slice(0, 5);
+
+  if (profileEntries.length > 0) {
+    state.refs.statsProfilesTitle.textContent = state.t.source_profiles_title;
+    state.refs.statsProfilesList.innerHTML = profileEntries
+      .map(([name, p]) => {
+        const labels = statsEngine.getSourceBiasLabel(p, state.lang);
+        return `<div class="aoz-stats-profile-row"><span class="aoz-stats-source-name">${name}</span><span class="aoz-stats-source-bias">${labels.political}</span><span class="aoz-stats-source-emo">${labels.emotional}(${labels.emotionalValue})</span><span class="aoz-stats-source-count">${state.t.source_reads(p.totalReads)}</span></div>`;
+      })
+      .join("");
+    state.refs.statsProfiles.classList.remove("aoz-hidden");
+  } else {
+    state.refs.statsProfiles.classList.add("aoz-hidden");
+  }
+
+  sidebarUi.showSidebarView(state.refs, "stats");
+}
+
+function handleSidebarStatsBack(state) {
+  sidebarUi.showSidebarView(state.refs, "main");
+}
+
 function bindSidebarChromeControls(state) {
   state.refs.closeButton.addEventListener("click", () => handleSidebarClose(state));
   state.refs.tab.addEventListener("click", () => handleSidebarOpen(state));
   state.refs.langButton.addEventListener("click", () => handleSidebarLangToggle(state));
   state.refs.backButton.addEventListener("click", () => handleSidebarBackClick(state));
   state.refs.premiumButton.addEventListener("click", handleSidebarPremiumClick);
+  // Phase 1
+  state.refs.statsButton.addEventListener("click", () => handleSidebarStatsClick(state));
+  state.refs.statsBackButton.addEventListener("click", () => handleSidebarStatsBack(state));
+  state.refs.streakWidget.addEventListener("click", () => handleSidebarStatsClick(state));
+  state.refs.dailyReportLink.addEventListener("click", () => handleSidebarStatsClick(state));
 }
 
 function bindSidebarSummaryActions(state) {
@@ -307,6 +505,13 @@ async function bootstrapSidebar(state) {
   renderClickbait(state);
 
   const usage = await refreshUsage(state);
+
+  // Phase 1: always render streak, daily report, source badge, show stats button
+  renderSidebarStreak(state);
+  renderSidebarDailyReport(state);
+  renderSidebarSourceBadge(state);
+  state.refs.statsButton.classList.remove("aoz-hidden");
+
   const lastResult = await appCore.getLastResult();
 
   if (lastResult) {

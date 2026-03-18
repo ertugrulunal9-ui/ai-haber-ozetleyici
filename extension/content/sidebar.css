@@ -534,6 +534,130 @@
 }
 .aoz-premium-btn:hover { transform: translateY(-1px) !important; }
 
+/* ── Phase 1: Streak Widget ─────────────────────────────────────────── */
+
+.aoz-streak-widget {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 0 10px !important;
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+  border: 1px solid #fde68a !important;
+  cursor: pointer !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+.aoz-streak-widget:hover { transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(245,158,11,0.2) !important; }
+.aoz-streak-widget.aoz-streak-hot { background: linear-gradient(135deg, #fff7ed, #ffedd5) !important; border-color: #fdba74 !important; animation: aoz-streak-pulse 2s ease-in-out infinite !important; }
+
+@keyframes aoz-streak-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+}
+
+.aoz-streak-fire { font-size: 16px !important; line-height: 1 !important; }
+.aoz-streak-text { font-size: 12px !important; font-weight: 700 !important; color: #92400e !important; flex: 1 !important; }
+.aoz-streak-best { font-size: 10px !important; color: #b45309 !important; font-weight: 600 !important; }
+
+/* ── Phase 1: Stats Button ─────────────────────────────────────────── */
+
+.aoz-stats-btn {
+  width: 100% !important;
+  margin-top: 8px !important;
+  background: none !important;
+  border: 1px dashed #dbe7f5 !important;
+  border-radius: 10px !important;
+  padding: 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #5f7187 !important;
+  cursor: pointer !important;
+  transition: background 0.15s, border-color 0.15s, color 0.15s !important;
+}
+.aoz-stats-btn:hover { background: #f8fbff !important; border-color: #a0bbdf !important; color: #0f172a !important; }
+
+/* ── Phase 1: Daily Report ─────────────────────────────────────────── */
+
+.aoz-daily-report {
+  border: 1px solid #bfdbfe !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+  padding: 10px 12px !important;
+  margin: 0 0 10px !important;
+}
+.aoz-daily-report-title { font-size: 11px !important; font-weight: 700 !important; color: #1e40af !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; margin: 0 0 4px !important; }
+.aoz-daily-report-line1, .aoz-daily-report-line2 { font-size: 12px !important; color: #1e3a5f !important; margin: 2px 0 !important; line-height: 1.5 !important; }
+.aoz-daily-report-link { display: inline-block !important; margin-top: 6px !important; font-size: 11px !important; font-weight: 600 !important; color: #2563eb !important; background: none !important; border: none !important; cursor: pointer !important; padding: 0 !important; }
+.aoz-daily-report-link:hover { color: #1d4ed8 !important; }
+
+/* ── Phase 1: Source Badge ─────────────────────────────────────────── */
+
+.aoz-source-badge {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  margin: 0 0 10px !important;
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  background: #f0f9ff !important;
+  border: 1px solid #bae6fd !important;
+  font-size: 11px !important;
+}
+.aoz-source-badge-name { color: #0c4a6e !important; font-weight: 600 !important; }
+.aoz-source-badge-bias { color: #2563eb !important; font-weight: 700 !important; }
+.aoz-source-badge-emo-wrap { flex: 1 !important; min-width: 60px !important; height: 4px !important; border-radius: 2px !important; background: #e2e8f0 !important; overflow: hidden !important; }
+.aoz-source-badge-emo-bar { height: 100% !important; border-radius: 2px !important; background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444) !important; transition: width 0.4s ease !important; }
+
+/* ── Phase 1: Stats View ───────────────────────────────────────────── */
+
+.aoz-stats-view {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  animation: aoz-fade-in 0.2s ease !important;
+}
+
+.aoz-stats-streak-section {
+  border: 1px solid #fde68a !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+  padding: 11px 12px !important;
+}
+.aoz-stats-streak-row { display: flex !important; align-items: center !important; gap: 8px !important; font-size: 13px !important; font-weight: 700 !important; color: #92400e !important; margin: 0 0 8px !important; }
+.aoz-stats-streak-bar-wrap { height: 6px !important; border-radius: 3px !important; background: #fde68a !important; overflow: hidden !important; }
+.aoz-stats-streak-bar { height: 100% !important; border-radius: 3px !important; background: linear-gradient(90deg, #f59e0b, #f97316) !important; transition: width 0.4s ease !important; }
+.aoz-stats-streak-best { font-size: 10px !important; color: #b45309 !important; margin: 4px 0 0 !important; }
+
+.aoz-stats-weekly, .aoz-stats-bias, .aoz-stats-sources, .aoz-stats-profiles {
+  border: 1px solid #dbe7f5 !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,0.9) !important;
+  padding: 11px 12px !important;
+}
+
+.aoz-stats-line { font-size: 12px !important; color: #0f172a !important; margin: 4px 0 !important; line-height: 1.5 !important; }
+.aoz-stats-no-data { font-size: 12px !important; color: #5f7187 !important; text-align: center !important; padding: 16px 0 !important; margin: 0 !important; }
+
+.aoz-stats-bias-desc { font-size: 11px !important; color: #5f7187 !important; margin: 0 0 10px !important; font-style: italic !important; }
+.aoz-stats-bias-label { font-size: 11px !important; color: #5f7187 !important; margin: 0 0 6px !important; }
+.aoz-stats-bias-label strong { color: #0f172a !important; }
+
+.aoz-stats-source-row, .aoz-stats-profile-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 4px 0 !important;
+  font-size: 11px !important;
+  border-bottom: 1px solid #dbe7f5 !important;
+}
+.aoz-stats-source-row:last-child, .aoz-stats-profile-row:last-child { border-bottom: none !important; }
+.aoz-stats-source-name { color: #0f172a !important; font-weight: 600 !important; flex: 1 !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+.aoz-stats-source-count { color: #5f7187 !important; margin-left: 8px !important; }
+.aoz-stats-source-bias { color: #2563eb !important; font-weight: 600 !important; margin-left: 6px !important; }
+.aoz-stats-source-emo { color: #d97706 !important; font-size: 10px !important; margin-left: 6px !important; }
+
 /* ── Hidden ──────────────────────────────────────────────────────────── */
 
 .aoz-hidden { display: none !important; }
@@ -645,4 +769,40 @@
   .aoz-bias-meter-labels { color: #94a3b8 !important; }
 
   .aoz-keyword-tag { background: #1e3a5f !important; color: #93c5fd !important; }
+
+  /* Phase 1 dark mode */
+  .aoz-streak-widget { background: linear-gradient(135deg, #422006, #78350f) !important; border-color: #92400e !important; }
+  .aoz-streak-widget.aoz-streak-hot { background: linear-gradient(135deg, #431407, #7c2d12) !important; border-color: #c2410c !important; }
+  .aoz-streak-text { color: #fbbf24 !important; }
+  .aoz-streak-best { color: #f59e0b !important; }
+
+  .aoz-stats-btn { color: #94a3b8 !important; border-color: #475569 !important; }
+  .aoz-stats-btn:hover { background: #273548 !important; color: #e2e8f0 !important; border-color: #64748b !important; }
+
+  .aoz-daily-report { background: linear-gradient(135deg, #1e293b, #1e3a5f) !important; border-color: #334155 !important; }
+  .aoz-daily-report-title { color: #60a5fa !important; }
+  .aoz-daily-report-line1, .aoz-daily-report-line2 { color: #cbd5e1 !important; }
+  .aoz-daily-report-link { color: #60a5fa !important; }
+
+  .aoz-source-badge { background: #0c4a6e !important; border-color: #075985 !important; }
+  .aoz-source-badge-name { color: #bae6fd !important; }
+  .aoz-source-badge-bias { color: #60a5fa !important; }
+  .aoz-source-badge-emo-wrap { background: #334155 !important; }
+
+  .aoz-stats-streak-section { background: linear-gradient(135deg, #422006, #78350f) !important; border-color: #92400e !important; }
+  .aoz-stats-streak-row { color: #fbbf24 !important; }
+  .aoz-stats-streak-bar-wrap { background: #92400e !important; }
+  .aoz-stats-streak-best { color: #f59e0b !important; }
+
+  .aoz-stats-weekly, .aoz-stats-bias, .aoz-stats-sources, .aoz-stats-profiles { background: rgba(30,41,59,0.9) !important; border-color: #334155 !important; }
+  .aoz-stats-line { color: #e2e8f0 !important; }
+  .aoz-stats-no-data { color: #94a3b8 !important; }
+  .aoz-stats-bias-desc { color: #94a3b8 !important; }
+  .aoz-stats-bias-label { color: #94a3b8 !important; }
+  .aoz-stats-bias-label strong { color: #e2e8f0 !important; }
+  .aoz-stats-source-row, .aoz-stats-profile-row { border-bottom-color: #334155 !important; }
+  .aoz-stats-source-name { color: #e2e8f0 !important; }
+  .aoz-stats-source-count { color: #94a3b8 !important; }
+  .aoz-stats-source-bias { color: #60a5fa !important; }
+  .aoz-stats-source-emo { color: #fbbf24 !important; }
 }

@@ -4,6 +4,39 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     chrome.tabs.create({ url: chrome.runtime.getURL("onboarding/onboarding.html") });
   }
+  // Set up recurring alarms for stats maintenance and daily digest
+  chrome.alarms.create("pruneStats", { periodInMinutes: 1440 });
+  chrome.alarms.create("dailyDigest", { periodInMinutes: 1440, delayInMinutes: 1 });
+});
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === "pruneStats") {
+    const { dailyStats = {} } = await chrome.storage.local.get("dailyStats");
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffKey = cutoff.toISOString().slice(0, 10);
+    let changed = false;
+    for (const key of Object.keys(dailyStats)) {
+      if (key < cutoffKey) {
+        delete dailyStats[key];
+        changed = true;
+      }
+    }
+    if (changed) await chrome.storage.local.set({ dailyStats });
+  }
+
+  if (alarm.name === "dailyDigest") {
+    // Check if user was active yesterday
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = yesterday.toISOString().slice(0, 10);
+    const { dailyStats = {} } = await chrome.storage.local.get("dailyStats");
+    const yStats = dailyStats[yKey];
+    if (yStats && yStats.articlesRead > 0) {
+      chrome.action.setBadgeText({ text: "NEW" });
+      chrome.action.setBadgeBackgroundColor({ color: "#2563eb" });
+    }
+  }
 });
 
 const CONFIG = Object.freeze({

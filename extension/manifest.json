@@ -9,7 +9,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "alarms"],
   "host_permissions": [
     "http://*/*",
     "https://*/*"
@@ -30,6 +30,7 @@
         "utils/client-state.js",
         "utils/ui-common.js",
         "utils/summary-surface.js",
+        "utils/stats-engine.js",
         "utils/extractor.js",
         "utils/app-core.js",
         "content/sidebar-ui.js",

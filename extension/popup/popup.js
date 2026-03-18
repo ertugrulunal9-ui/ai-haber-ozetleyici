@@ -85,6 +85,11 @@ async function init() {
   applyTranslations();
 
   const usage = await refreshUsage();
+
+  // Phase 1: always render streak widget and daily report
+  renderStreakWidget();
+  renderDailyReport();
+
   const lastResult = await appCore.getLastResult();
 
   if (lastResult) {
@@ -250,6 +255,8 @@ async function handleBackClick() {
   const history = await appCore.getHistory();
   renderHistory(history);
   popupUi.showPopupView(state.refs, state.currentRemaining === 0 && history.length === 0 ? "limit" : "main");
+  renderStreakWidget();
+  renderDailyReport();
 }
 
 async function handleLangToggle() {
@@ -275,6 +282,219 @@ function handlePremiumClick() {
   // Premium not yet available — button is hidden
 }
 
+// ── Phase 1: Stats, Streak, Daily Report ─────────────────────────────
+
+async function renderStreakWidget() {
+  const streak = await appCore.getStreak();
+  if (!streak || streak.current === 0) {
+    state.refs.streakWidget.classList.add("hidden");
+    return;
+  }
+  state.refs.streakIcon.textContent = streak.current >= 7 ? "\u{1F525}" : "\u{1F525}";
+  state.refs.streakText.textContent = state.t.streak_label(streak.current);
+  state.refs.streakBest.textContent = state.t.streak_best(streak.longest);
+  state.refs.streakWidget.classList.remove("hidden");
+  if (streak.current >= 7) {
+    state.refs.streakWidget.classList.add("streak-hot");
+  } else {
+    state.refs.streakWidget.classList.remove("streak-hot");
+  }
+}
+
+async function renderDailyReport() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yKey = yesterday.toISOString().slice(0, 10);
+  const yStats = await appCore.getDailyStats(yKey);
+
+  if (!yStats || yStats.articlesRead === 0) {
+    state.refs.dailyReportCard.classList.add("hidden");
+    return;
+  }
+
+  state.refs.dailyReportTitle.textContent = state.t.daily_report_title;
+  state.refs.dailyReportLine1.textContent = state.t.daily_report_yesterday(yStats.articlesRead);
+
+  // Find top source
+  const sources = yStats.sources || {};
+  const topSource = Object.entries(sources).sort((a, b) => b[1] - a[1])[0];
+  if (topSource) {
+    state.refs.dailyReportLine2.textContent = state.t.daily_report_top_source(topSource[0], topSource[1]);
+  } else {
+    state.refs.dailyReportLine2.textContent = "";
+  }
+
+  state.refs.dailyReportDetailsBtn.textContent = `${state.t.daily_report_details} \u2192`;
+  state.refs.dailyReportCard.classList.remove("hidden");
+
+  // Clear badge
+  chrome.action.setBadgeText({ text: "" });
+}
+
+async function handleStatsClick() {
+  const statsEngine = globalThis.AozStatsEngine;
+  const clientState = globalThis.AozClientState;
+
+  const streak = await clientState.getStreak();
+  const weekly = await clientState.getWeeklyStats();
+  const sourceProfiles = await clientState.getSourceProfiles();
+  let dailyStats = {};
+  try { ({ dailyStats = {} } = await chrome.storage.local.get("dailyStats")); }
+  catch { /* context invalidated */ }
+
+  const hasData = weekly.totalArticles > 0;
+
+  // Translations
+  state.refs.statsViewTitle.textContent = state.t.stats_title;
+  state.refs.statsBackButton.textContent = state.t.back;
+
+  if (!hasData) {
+    state.refs.statsNoData.textContent = state.t.stats_no_data;
+    state.refs.statsNoData.classList.remove("hidden");
+    state.refs.statsStreakSection.classList.add("hidden");
+    state.refs.statsWeeklyCard.classList.add("hidden");
+    state.refs.statsBiasCard.classList.add("hidden");
+    state.refs.statsSourcesCard.classList.add("hidden");
+    state.refs.statsSourceProfilesCard.classList.add("hidden");
+    popupUi.showPopupView(state.refs, "stats");
+    return;
+  }
+
+  state.refs.statsNoData.classList.add("hidden");
+
+  // Streak
+  if (streak.current > 0) {
+    state.refs.statsStreakIcon.textContent = streak.current >= 7 ? "\u{1F525}" : "\u{1F525}";
+    state.refs.statsStreakText.textContent = state.t.streak_label(streak.current);
+    const pct = Math.min(100, (streak.current / Math.max(streak.longest, 1)) * 100);
+    state.refs.statsStreakBar.style.width = `${pct}%`;
+    state.refs.statsStreakBest.textContent = state.t.streak_best(streak.longest);
+    state.refs.statsStreakSection.classList.remove("hidden");
+  } else {
+    state.refs.statsStreakSection.classList.add("hidden");
+  }
+
+  // Weekly numbers
+  state.refs.statsWeeklyLabel.textContent = state.t.stats_this_week;
+  state.refs.statsArticles.textContent = state.t.stats_articles(weekly.totalArticles);
+  state.refs.statsAnalyses.textContent = state.t.stats_analyses(weekly.totalAnalyses);
+  state.refs.statsQuestions.textContent = state.t.stats_questions(weekly.totalQuestions);
+  state.refs.statsVotes.textContent = state.t.stats_votes(weekly.totalVotes);
+  state.refs.statsWeeklyCard.classList.remove("hidden");
+
+  // Bias Map
+  const biasData = statsEngine.computeDailyBiasAverages(dailyStats, 7);
+  const hasAnyBias = biasData.some((d) => d.count > 0);
+
+  if (hasAnyBias) {
+    state.refs.statsBiasTitle.textContent = state.t.bias_map_title;
+    const allReadings = weekly.biasReadings;
+    const avgP = allReadings.length > 0
+      ? allReadings.reduce((s, r) => s + r.political, 0) / allReadings.length
+      : null;
+    const avgE = allReadings.length > 0
+      ? allReadings.reduce((s, r) => s + r.emotional, 0) / allReadings.length
+      : null;
+
+    let html = `<p class="stats-bias-desc">${state.t.bias_map_desc}</p>`;
+
+    // Political trend bar
+    if (avgP !== null) {
+      const pLabel = statsEngine.computeBiasLabel(avgP, state.lang);
+      const eLabel = statsEngine.computeEmotionalLabel(avgE, state.lang);
+      const pLeft = (((avgP + 100) / 200) * 100).toFixed(1);
+      const eLeft = avgE.toFixed(1);
+
+      html += `
+        <p class="stats-bias-label">${state.t.bias_map_political_trend}: <strong>${pLabel}</strong></p>
+        <div class="stats-bias-bar-labels"><span>Sol</span><span>Merkez</span><span>Sağ</span></div>
+        <div class="bias-bar political-bar" style="position:relative;height:8px;border-radius:99px;background:linear-gradient(to right,#3b82f6,#22c55e,#ef4444);margin-bottom:12px;">
+          <div class="bias-dot" style="position:absolute;top:50%;left:${pLeft}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid #334155;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>
+        </div>
+        <p class="stats-bias-label">${state.t.bias_map_emotional_trend}: <strong>${eLabel}</strong></p>
+        <div class="stats-bias-bar-labels"><span>Nesnel</span><span>Orta</span><span>Duygusal</span></div>
+        <div class="bias-bar emotional-bar" style="position:relative;height:8px;border-radius:99px;background:linear-gradient(to right,#22c55e,#f59e0b,#ef4444);margin-bottom:8px;">
+          <div class="bias-dot" style="position:absolute;top:50%;left:${eLeft}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid #334155;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>
+        </div>
+      `;
+
+      // Daily bar chart
+      const dayLabels = { 0: "Pazar", 1: "Pazartesi", 2: "Salı", 3: "Çarşamba", 4: "Perşembe", 5: "Cuma", 6: "Cumartesi" };
+      const dayLabelsEn = { 0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday" };
+      const labels = state.lang === "en" ? dayLabelsEn : dayLabels;
+      const daysWithData = biasData.filter((d) => d.count > 0);
+
+      if (daysWithData.length > 1) {
+        html += `<p class="stats-bias-label" style="margin-top:8px">${state.t.bias_map_day_label}</p>`;
+        html += '<div class="stats-bias-daily">';
+        for (const d of daysWithData) {
+          const dayOfWeek = new Date(d.date).getDay();
+          const label = labels[dayOfWeek];
+          const barWidth = Math.max(10, (((d.avgPolitical + 100) / 200) * 100));
+          const biasLabel = statsEngine.computeBiasLabel(d.avgPolitical, state.lang);
+          html += `<div class="stats-bias-day-row">
+            <span class="stats-bias-day-label">${label}</span>
+            <div class="stats-bias-day-bar-wrap"><div class="stats-bias-day-bar" style="width:${barWidth}%"></div></div>
+            <span class="stats-bias-day-val">${biasLabel}</span>
+          </div>`;
+        }
+        html += "</div>";
+      }
+    }
+
+    state.refs.statsBiasContent.innerHTML = html;
+    state.refs.statsBiasCard.classList.remove("hidden");
+  } else {
+    state.refs.statsBiasCard.classList.add("hidden");
+  }
+
+  // Top Sources
+  const topSources = statsEngine.computeTopSources(weekly.sources, 5);
+  if (topSources.length > 0) {
+    state.refs.statsSourcesTitle.textContent = state.t.stats_top_sources;
+    state.refs.statsSourcesList.innerHTML = topSources
+      .map((s) => `<div class="stats-source-row"><span class="stats-source-name">${s.name}</span><span class="stats-source-count">(${s.count})</span></div>`)
+      .join("");
+    state.refs.statsSourcesCard.classList.remove("hidden");
+  } else {
+    state.refs.statsSourcesCard.classList.add("hidden");
+  }
+
+  // Source Profiles
+  const profileEntries = Object.entries(sourceProfiles)
+    .filter(([, p]) => p.totalBiasAnalyses >= 3)
+    .sort((a, b) => b[1].totalReads - a[1].totalReads)
+    .slice(0, 5);
+
+  if (profileEntries.length > 0) {
+    state.refs.statsSourceProfilesTitle.textContent = state.t.source_profiles_title;
+    state.refs.statsSourceProfilesList.innerHTML = profileEntries
+      .map(([name, p]) => {
+        const labels = statsEngine.getSourceBiasLabel(p, state.lang);
+        return `<div class="stats-source-profile-row">
+          <span class="stats-source-name">${name}</span>
+          <span class="stats-source-bias">${labels.political}</span>
+          <span class="stats-source-emo">${labels.emotional}(${labels.emotionalValue})</span>
+          <span class="stats-source-count">${state.t.source_reads(p.totalReads)}</span>
+        </div>`;
+      })
+      .join("");
+    state.refs.statsSourceProfilesCard.classList.remove("hidden");
+  } else {
+    state.refs.statsSourceProfilesCard.classList.add("hidden");
+  }
+
+  popupUi.showPopupView(state.refs, "stats");
+}
+
+function handleStatsBack() {
+  popupUi.showPopupView(state.refs, "main");
+}
+
+// Expose getStreak & getDailyStats on appCore for popup use
+appCore.getStreak = globalThis.AozClientState.getStreak;
+appCore.getDailyStats = globalThis.AozClientState.getDailyStats;
+
 function bindPopupEvents() {
   state.refs.summarizeButton.addEventListener("click", handleSummarizeClick);
   state.refs.biasButton.addEventListener("click", handleBiasClick);
@@ -289,6 +509,11 @@ function bindPopupEvents() {
   state.refs.premiumButton.addEventListener("click", handlePremiumClick);
   state.refs.feedbackGoodButton.addEventListener("click", () => handleFeedback(true));
   state.refs.feedbackBadButton.addEventListener("click", () => handleFeedback(false));
+  // Phase 1
+  state.refs.statsButton.addEventListener("click", handleStatsClick);
+  state.refs.statsBackButton.addEventListener("click", handleStatsBack);
+  state.refs.dailyReportDetailsBtn.addEventListener("click", handleStatsClick);
+  state.refs.streakWidget.addEventListener("click", handleStatsClick);
 }
 
 bindPopupEvents();

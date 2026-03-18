@@ -20,11 +20,67 @@
       <div class="aoz-body">
         <div class="aoz-main-view">
           <p class="aoz-usage-text"></p>
+          <!-- Daily Report Card -->
+          <div class="aoz-daily-report aoz-hidden">
+            <p class="aoz-daily-report-title"></p>
+            <p class="aoz-daily-report-line1"></p>
+            <p class="aoz-daily-report-line2"></p>
+            <button type="button" class="aoz-daily-report-link" aria-label="${t.daily_report_details}"></button>
+          </div>
+          <!-- Source Badge -->
+          <div class="aoz-source-badge aoz-hidden">
+            <span class="aoz-source-badge-name"></span>
+            <span class="aoz-source-badge-bias"></span>
+            <div class="aoz-source-badge-emo-wrap">
+              <div class="aoz-source-badge-emo-bar"></div>
+            </div>
+          </div>
+          <!-- Streak Widget -->
+          <div class="aoz-streak-widget aoz-hidden">
+            <span class="aoz-streak-fire"></span>
+            <span class="aoz-streak-text"></span>
+            <span class="aoz-streak-best"></span>
+          </div>
           <button type="button" class="aoz-btn-primary">${t.summarize}</button>
+          <button type="button" class="aoz-stats-btn aoz-hidden">\u{1F4CA} ${t.stats_title}</button>
           <div class="aoz-history-section aoz-hidden">
             <p class="aoz-label aoz-history-label">${t.history_label}</p>
             <div class="aoz-history-list"></div>
           </div>
+        </div>
+
+        <!-- Stats View -->
+        <div class="aoz-stats-view aoz-hidden">
+          <p class="aoz-label aoz-stats-title">${t.stats_title}</p>
+          <div class="aoz-stats-streak-section aoz-hidden">
+            <div class="aoz-stats-streak-row">
+              <span class="aoz-stats-streak-icon"></span>
+              <span class="aoz-stats-streak-text"></span>
+            </div>
+            <div class="aoz-stats-streak-bar-wrap"><div class="aoz-stats-streak-bar"></div></div>
+            <p class="aoz-stats-streak-best"></p>
+          </div>
+          <div class="aoz-stats-weekly aoz-hidden">
+            <p class="aoz-label aoz-stats-weekly-label"></p>
+            <p class="aoz-stats-line aoz-stats-articles"></p>
+            <p class="aoz-stats-line aoz-stats-analyses"></p>
+            <p class="aoz-stats-line aoz-stats-questions"></p>
+            <p class="aoz-stats-line aoz-stats-votes"></p>
+          </div>
+          <div class="aoz-stats-bias aoz-hidden">
+            <p class="aoz-label aoz-stats-bias-title"></p>
+            <div class="aoz-stats-bias-content"></div>
+          </div>
+          <div class="aoz-stats-sources aoz-hidden">
+            <p class="aoz-label aoz-stats-sources-title"></p>
+            <div class="aoz-stats-sources-list"></div>
+          </div>
+          <div class="aoz-stats-profiles aoz-hidden">
+            <p class="aoz-label aoz-stats-profiles-title"></p>
+            <div class="aoz-stats-profiles-list"></div>
+          </div>
+          <p class="aoz-stats-no-data aoz-hidden"></p>
+          <button type="button" class="aoz-back-btn aoz-stats-back-btn">${t.back}</button>
         </div>
         <div class="aoz-loading-view aoz-hidden">
           <div class="aoz-spinner"></div>
@@ -97,7 +153,7 @@
             <p class="aoz-qa-answer aoz-hidden"></p>
           </div>
 
-          <button type="button" class="aoz-back-btn">${t.back}</button>
+          <button type="button" class="aoz-back-btn aoz-result-back-btn">${t.back}</button>
         </div>
         <div class="aoz-limit-view aoz-hidden">
           <p class="aoz-limit-text"></p>
@@ -115,6 +171,7 @@
       loadingView: sidebar.querySelector(".aoz-loading-view"),
       resultView: sidebar.querySelector(".aoz-result-view"),
       limitView: sidebar.querySelector(".aoz-limit-view"),
+      statsView: sidebar.querySelector(".aoz-stats-view"),
       usageText: sidebar.querySelector(".aoz-usage-text"),
       summarizeButton: sidebar.querySelector(".aoz-btn-primary"),
       historySection: sidebar.querySelector(".aoz-history-section"),
@@ -151,11 +208,50 @@
       qaInput: sidebar.querySelector(".aoz-qa-input"),
       qaButton: sidebar.querySelector(".aoz-qa-btn"),
       qaAnswer: sidebar.querySelector(".aoz-qa-answer"),
-      backButton: sidebar.querySelector(".aoz-back-btn"),
+      backButton: sidebar.querySelector(".aoz-result-back-btn"),
       limitText: sidebar.querySelector(".aoz-limit-text"),
       premiumButton: sidebar.querySelector(".aoz-premium-btn"),
       langButton: sidebar.querySelector(".aoz-lang-btn"),
       closeButton: sidebar.querySelector(".aoz-close-btn"),
+      // Phase 1 — Streak, Stats, Daily Report, Source Badge
+      streakWidget: sidebar.querySelector(".aoz-streak-widget"),
+      streakFire: sidebar.querySelector(".aoz-streak-fire"),
+      streakText: sidebar.querySelector(".aoz-streak-text"),
+      streakBest: sidebar.querySelector(".aoz-streak-best"),
+      statsButton: sidebar.querySelector(".aoz-stats-btn"),
+      dailyReport: sidebar.querySelector(".aoz-daily-report"),
+      dailyReportTitle: sidebar.querySelector(".aoz-daily-report-title"),
+      dailyReportLine1: sidebar.querySelector(".aoz-daily-report-line1"),
+      dailyReportLine2: sidebar.querySelector(".aoz-daily-report-line2"),
+      dailyReportLink: sidebar.querySelector(".aoz-daily-report-link"),
+      sourceBadge: sidebar.querySelector(".aoz-source-badge"),
+      sourceBadgeName: sidebar.querySelector(".aoz-source-badge-name"),
+      sourceBadgeBias: sidebar.querySelector(".aoz-source-badge-bias"),
+      sourceBadgeEmoBar: sidebar.querySelector(".aoz-source-badge-emo-bar"),
+      // Stats view refs
+      statsTitle: sidebar.querySelector(".aoz-stats-title"),
+      statsStreakSection: sidebar.querySelector(".aoz-stats-streak-section"),
+      statsStreakIcon: sidebar.querySelector(".aoz-stats-streak-icon"),
+      statsStreakText: sidebar.querySelector(".aoz-stats-streak-text"),
+      statsStreakBar: sidebar.querySelector(".aoz-stats-streak-bar"),
+      statsStreakBest: sidebar.querySelector(".aoz-stats-streak-best"),
+      statsWeekly: sidebar.querySelector(".aoz-stats-weekly"),
+      statsWeeklyLabel: sidebar.querySelector(".aoz-stats-weekly-label"),
+      statsArticles: sidebar.querySelector(".aoz-stats-articles"),
+      statsAnalyses: sidebar.querySelector(".aoz-stats-analyses"),
+      statsQuestions: sidebar.querySelector(".aoz-stats-questions"),
+      statsVotes: sidebar.querySelector(".aoz-stats-votes"),
+      statsBias: sidebar.querySelector(".aoz-stats-bias"),
+      statsBiasTitle: sidebar.querySelector(".aoz-stats-bias-title"),
+      statsBiasContent: sidebar.querySelector(".aoz-stats-bias-content"),
+      statsSources: sidebar.querySelector(".aoz-stats-sources"),
+      statsSourcesTitle: sidebar.querySelector(".aoz-stats-sources-title"),
+      statsSourcesList: sidebar.querySelector(".aoz-stats-sources-list"),
+      statsProfiles: sidebar.querySelector(".aoz-stats-profiles"),
+      statsProfilesTitle: sidebar.querySelector(".aoz-stats-profiles-title"),
+      statsProfilesList: sidebar.querySelector(".aoz-stats-profiles-list"),
+      statsNoData: sidebar.querySelector(".aoz-stats-no-data"),
+      statsBackButton: sidebar.querySelector(".aoz-stats-back-btn"),
     };
   }
 
@@ -183,10 +279,11 @@
       loading: refs.loadingView,
       result: refs.resultView,
       limit: refs.limitView,
+      stats: refs.statsView,
     };
 
     Object.entries(viewMap).forEach(([name, node]) => {
-      node.classList.toggle("aoz-hidden", name !== viewName);
+      if (node) node.classList.toggle("aoz-hidden", name !== viewName);
     });
   }
 

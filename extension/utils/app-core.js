@@ -85,11 +85,20 @@
       await clientState.setCachedSummary(article.url, historyItem);
     }
 
+    // Stats hooks
+    await clientState.recordDailyAction("summary");
+    await clientState.updateStreak();
+    try {
+      const hostname = new URL(article.url).hostname.replace(/^www\./, "");
+      await clientState.recordSourceRead(hostname);
+      await clientState.incrementSourceReads(hostname);
+    } catch { /* invalid URL — skip */ }
+
     return { ...result, historyItem };
   }
 
   async function askQuestion({ article, lang, deviceId, question }) {
-    return requestApi({
+    const result = await requestApi({
       action: "ask",
       text: article.text,
       title: article.title,
@@ -98,10 +107,14 @@
       deviceId,
       question,
     });
+    if (!result.error) {
+      await clientState.recordDailyAction("question");
+    }
+    return result;
   }
 
   async function analyzeArticle({ article, lang, deviceId }) {
-    return requestApi({
+    const result = await requestApi({
       action: "analyze",
       text: article.text,
       title: article.title,
@@ -109,6 +122,25 @@
       lang,
       deviceId,
     });
+    if (!result.error && result.political !== undefined) {
+      await clientState.recordDailyAction("analysis");
+      try {
+        const hostname = new URL(article.url).hostname.replace(/^www\./, "");
+        await clientState.recordBiasReading({
+          url: article.url,
+          title: article.title,
+          source: hostname,
+          political: result.political,
+          emotional: result.emotional,
+        });
+        await clientState.updateSourceProfile({
+          hostname,
+          political: result.political,
+          emotional: result.emotional,
+        });
+      } catch { /* invalid URL — skip */ }
+    }
+    return result;
   }
 
   async function getVotes({ url, deviceId }) {
@@ -116,7 +148,11 @@
   }
 
   async function submitVote({ url, deviceId, is_clickbait }) {
-    return requestApi({ action: "vote", url, deviceId, is_clickbait });
+    const result = await requestApi({ action: "vote", url, deviceId, is_clickbait });
+    if (!result.error) {
+      await clientState.recordDailyAction("vote");
+    }
+    return result;
   }
 
   async function submitFeedback({ url, deviceId, rating }) {

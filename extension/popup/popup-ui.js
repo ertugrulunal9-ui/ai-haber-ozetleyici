@@ -11,6 +11,7 @@
       loadingView: document.getElementById("loadingView"),
       resultView: document.getElementById("resultView"),
       limitView: document.getElementById("limitView"),
+      statsView: document.getElementById("statsView"),
       usageText: document.getElementById("usageText"),
       summarizeButton: document.getElementById("summarizeBtn"),
       historySection: document.getElementById("historySection"),
@@ -52,6 +53,43 @@
       keywordsContainer: document.getElementById("keywordsContainer"),
       feedbackGoodButton: document.getElementById("feedbackGoodBtn"),
       feedbackBadButton: document.getElementById("feedbackBadBtn"),
+      // Phase 1 — Streak & Stats
+      streakWidget: document.getElementById("streakWidget"),
+      streakIcon: document.getElementById("streakIcon"),
+      streakText: document.getElementById("streakText"),
+      streakBest: document.getElementById("streakBest"),
+      statsButton: document.getElementById("statsBtn"),
+      statsBackButton: document.getElementById("statsBackBtn"),
+      // Stats view refs
+      statsViewTitle: document.getElementById("statsViewTitle"),
+      statsStreakSection: document.getElementById("statsStreakSection"),
+      statsStreakIcon: document.getElementById("statsStreakIcon"),
+      statsStreakText: document.getElementById("statsStreakText"),
+      statsStreakBar: document.getElementById("statsStreakBar"),
+      statsStreakBest: document.getElementById("statsStreakBest"),
+      statsWeeklyLabel: document.getElementById("statsWeeklyLabel"),
+      statsArticles: document.getElementById("statsArticles"),
+      statsAnalyses: document.getElementById("statsAnalyses"),
+      statsQuestions: document.getElementById("statsQuestions"),
+      statsVotes: document.getElementById("statsVotes"),
+      statsBiasTitle: document.getElementById("statsBiasTitle"),
+      statsBiasContent: document.getElementById("statsBiasContent"),
+      statsSourcesTitle: document.getElementById("statsSourcesTitle"),
+      statsSourcesList: document.getElementById("statsSourcesList"),
+      statsSourceProfilesTitle: document.getElementById("statsSourceProfilesTitle"),
+      statsSourceProfilesList: document.getElementById("statsSourceProfilesList"),
+      statsNoData: document.getElementById("statsNoData"),
+      // Stats view card containers
+      statsWeeklyCard: document.getElementById("statsWeeklyCard"),
+      statsBiasCard: document.getElementById("statsBiasCard"),
+      statsSourcesCard: document.getElementById("statsSourcesCard"),
+      statsSourceProfilesCard: document.getElementById("statsSourceProfilesCard"),
+      // Daily report
+      dailyReportCard: document.getElementById("dailyReportCard"),
+      dailyReportTitle: document.getElementById("dailyReportTitle"),
+      dailyReportLine1: document.getElementById("dailyReportLine1"),
+      dailyReportLine2: document.getElementById("dailyReportLine2"),
+      dailyReportDetailsBtn: document.getElementById("dailyReportDetailsBtn"),
     };
   }
 
@@ -61,10 +99,11 @@
       loading: refs.loadingView,
       result: refs.resultView,
       limit: refs.limitView,
+      stats: refs.statsView,
     };
 
     Object.entries(viewMap).forEach(([name, node]) => {
-      node.classList.toggle("hidden", name !== viewName);
+      if (node) node.classList.toggle("hidden", name !== viewName);
     });
   }
 
@@ -87,6 +126,12 @@
     refs.historyLabel.textContent = t.history_label;
     refs.limitText.textContent = globalThis.AozUi.getLimitResetText(t);
     surface.setUsageText(refs.usageText, t, currentRemaining);
+    // Phase 1 translations
+    if (refs.statsButton) refs.statsButton.textContent = `\u{1F4CA} ${t.stats_title}`;
+    if (refs.statsViewTitle) refs.statsViewTitle.textContent = t.stats_title;
+    if (refs.statsBackButton) refs.statsBackButton.textContent = t.back;
+    if (refs.dailyReportTitle) refs.dailyReportTitle.textContent = t.daily_report_title;
+    if (refs.dailyReportDetailsBtn) refs.dailyReportDetailsBtn.textContent = `${t.daily_report_details} \u2192`;
   }
 
   globalThis.AozPopupUi = {

@@ -23,9 +23,10 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: "test-key"
     steps:
       - uses: actions/checkout@v5
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
+      - name: Install Deno
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh -s -- -y v2.7.5
+          echo "$HOME/.deno/bin" >> "$GITHUB_PATH"
       - name: Lint
         run: deno lint
       - name: Test
