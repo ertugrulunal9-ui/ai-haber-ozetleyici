@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Özet</title>
+    <link rel="stylesheet" href="popup-base.css" />
+    <link rel="stylesheet" href="popup-layout.css" />
+    <link rel="stylesheet" href="popup-controls.css" />
+    <link rel="stylesheet" href="popup-analysis.css" />
+  </head>
+  <body>
+    <div class="popup-shell">
+      <div class="container">
+        <header class="app-header">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true">AI</span>
+            <span class="logo">AI &Ouml;zet</span>
+          </div>
+          <button id="langBtn" class="lang-btn" aria-label="Dil degistir">EN</button>
+        </header>
+
+        <!-- Ana ekran -->
+        <div id="mainView" class="view">
+          <p id="usageText" class="usage-text"></p>
+          <button id="summarizeBtn" class="btn btn-primary">&Ouml;zetle</button>
+          <div id="historySection" class="history-panel hidden">
+            <h3 id="historyLabel" class="history-label">Son &Ouml;zetler</h3>
+            <ul id="historyList"></ul>
+          </div>
+        </div>
+
+        <!-- Yukleniyor -->
+        <div id="loadingView" class="view hidden">
+          <div class="spinner"></div>
+          <p id="loadingText">&Ouml;zetleniyor...</p>
+        </div>
+
+        <!-- Sonuc -->
+        <div id="resultView" class="view hidden">
+          <section class="summary-card">
+            <h3 id="summaryLabel">&Ouml;zet</h3>
+            <p id="summaryText"></p>
+          </section>
+
+          <button id="biasBtn" class="btn-bias">&#9878; Tarafl&#305;l&#305;k Analizi</button>
+
+          <div id="biasSection" class="bias-card hidden">
+            <p class="section-label" id="biasSectionLabel">TARAFLILIK ANALİZİ</p>
+            <div class="bias-meter">
+              <div class="bias-meter-labels">
+                <span id="biasLeftLabel">Sol</span>
+                <span id="biasPoliticalValue"></span>
+                <span id="biasRightLabel">Sa&#287;</span>
+              </div>
+              <div class="bias-bar political-bar">
+                <div id="biasPoliticalDot" class="bias-dot"></div>
+              </div>
+            </div>
+            <div class="bias-meter">
+              <div class="bias-meter-labels">
+                <span id="biasObjectiveLabel">Nesnel</span>
+                <span id="biasEmotionalValue"></span>
+                <span id="biasEmotionalLabel">Duygusal</span>
+              </div>
+              <div class="bias-bar emotional-bar">
+                <div id="biasEmotionalDot" class="bias-dot"></div>
+              </div>
+            </div>
+            <p id="biasNote" class="bias-note"></p>
+          </div>
+
+          <div id="clickbaitSection" class="clickbait-card">
+            <p class="section-label" id="clickbaitLabel">CLICKBAIT MI?</p>
+            <div class="clickbait-vote-row">
+              <button id="voteYesBtn" type="button" class="btn-vote" aria-label="Clickbait">👎 Clickbait</button>
+              <button id="voteNoBtn" type="button" class="btn-vote" aria-label="Clickbait değil">👍 Değil</button>
+            </div>
+            <p id="clickbaitStats" class="clickbait-stats"></p>
+          </div>
+
+          <div class="share-row">
+            <button id="copyBtn" class="btn-share">
+              <span class="share-icon" aria-hidden="true">[]</span>
+              <span id="copyLabel">Kopyala</span>
+            </button>
+            <button id="twitterBtn" class="btn-share btn-share-x">X Payla&#351;</button>
+          </div>
+
+          <h3 id="sourcesLabel" class="hidden">Di&#287;er Kaynaklar</h3>
+          <ul id="sourcesList"></ul>
+
+          <div class="qa-section">
+            <h3 id="qaLabel">Soru Sor</h3>
+            <div class="qa-input-row">
+              <input id="qaInput" type="text" placeholder="Bu haber hakkında bir şey sor..." aria-label="Soru" />
+              <button id="qaBtn">&rarr;</button>
+            </div>
+            <p id="qaAnswer" class="hidden"></p>
+          </div>
+
+          <button id="backBtn" class="btn btn-secondary">Geri</button>
+        </div>
+
+        <!-- Limit doldu -->
+        <div id="limitView" class="view hidden">
+          <p id="limitText"></p>
+          <button id="premiumBtn" class="btn btn-premium hidden">Premium'a Ge&ccedil;</button>
+        </div>
+      </div>
+    </div>
+    <script src="../utils/client-state.js"></script>
+    <script src="../utils/ui-common.js"></script>
+    <script src="../utils/summary-surface.js"></script>
+    <script src="../utils/app-core.js"></script>
+    <script src="popup-ui.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

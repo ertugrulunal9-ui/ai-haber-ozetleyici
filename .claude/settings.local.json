@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python create-icons.py)",
+      "Bash(del \"c:\\\\Users\\\\Galile\\\\ai-haber-ozetleyici\\\\store-screenshot.html\")",
+      "Bash(find /c/Users/Galile/ai-haber-ozetleyici -name package.json -o -name .env* -o -name deno.json)",
+      "Bash(openssl rand:*)",
+      "Bash(supabase --version)",
+      "Bash(npx supabase:*)",
+      "Bash(supabase secrets:*)"
+    ]
+  }
+}

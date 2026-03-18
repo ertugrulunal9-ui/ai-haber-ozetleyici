@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend (Deno)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: supabase/functions/summarize
+    env:
+      ALLOWED_ORIGIN: "chrome-extension://test"
+      OPENAI_API_KEY: "test-key"
+      SUPABASE_URL: "http://localhost:54321"
+      SUPABASE_SERVICE_ROLE_KEY: "test-key"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Lint
+        run: deno lint
+      - name: Test
+        run: deno test --allow-env *_test.ts
+
+  frontend-tests:
+    name: Frontend (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Test
+        run: npx vitest run

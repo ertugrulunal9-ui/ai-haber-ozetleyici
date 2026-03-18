@@ -1,0 +1,15 @@
+{
+  "appName": { "message": "AI News Summarizer" },
+  "appDescription": { "message": "Summarize news with AI, analyze political & emotional bias, vote on clickbait, and compare across sources." },
+  "summarize": { "message": "Summarize" },
+  "summarizing": { "message": "Summarizing..." },
+  "summary_title": { "message": "Summary" },
+  "sources_title": { "message": "Other Sources" },
+  "back": { "message": "Back" },
+  "go_premium": { "message": "Notify Me" },
+  "daily_limit": { "message": "You've used all 10 free summaries today. Come back tomorrow!" },
+  "usage_remaining": { "message": "{remaining} summaries left today." },
+  "not_article": { "message": "This page doesn't look like a news article." },
+  "error_generic": { "message": "Something went wrong. Please try again." },
+  "lang_switch": { "message": "TR" }
+}
