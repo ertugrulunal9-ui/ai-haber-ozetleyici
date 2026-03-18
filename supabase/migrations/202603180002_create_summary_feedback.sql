@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS summary_feedback (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  url TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  rating BOOLEAN NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (url, device_id)
+);

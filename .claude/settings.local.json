@@ -7,7 +7,8 @@
       "Bash(openssl rand:*)",
       "Bash(supabase --version)",
       "Bash(npx supabase:*)",
-      "Bash(supabase secrets:*)"
+      "Bash(supabase secrets:*)",
+      "Bash(git config:*)"
     ]
   }
 }

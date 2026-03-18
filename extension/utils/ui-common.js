@@ -5,7 +5,8 @@
       summarizing: "Özetleniyor...",
       back: "Geri",
       go_premium: "Beni Bilgilendir",
-      daily_limit: "Günlük 10 özet hakkın doldu. Yarın tekrar kullanabilirsin!",
+      daily_limit: "Günlük 10 özet hakkın doldu.",
+      limit_reset: (h) => `${h} saat sonra sıfırlanacak.`,
       assistant_limit: "Günlük soru ve analiz hakkın doldu.",
       usage_loading: "Yükleniyor...",
       usage_remaining: (n) => `Bugün ${n} özet hakkın kaldı.`,
@@ -38,6 +39,9 @@
       copy_action: "Kopyala",
       copied_action: "Kopyalandı!",
       twitter_action: "𝕏 Paylaş",
+      feedback_good: "👍",
+      feedback_bad: "👎",
+      feedback_thanks: "Teşekkürler!",
       error_short: "Bir hata oluştu. Tekrar dene.",
     },
     en: {
@@ -45,7 +49,8 @@
       summarizing: "Summarizing...",
       back: "Back",
       go_premium: "Notify Me",
-      daily_limit: "You've used all 10 free summaries today. Come back tomorrow!",
+      daily_limit: "You've used all 10 free summaries today.",
+      limit_reset: (h) => `Resets in ${h} hour${h === 1 ? "" : "s"}.`,
       assistant_limit: "You've used all question and analysis requests today.",
       usage_loading: "Loading...",
       usage_remaining: (n) => `${n} summaries left today.`,
@@ -78,6 +83,9 @@
       copy_action: "Copy",
       copied_action: "Copied!",
       twitter_action: "𝕏 Share",
+      feedback_good: "👍",
+      feedback_bad: "👎",
+      feedback_thanks: "Thanks!",
       error_short: "Something went wrong.",
     },
   };
@@ -142,6 +150,13 @@
     };
   }
 
+  function getLimitResetText(t) {
+    const now = new Date();
+    const midnightUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    const hoursLeft = Math.max(1, Math.ceil((midnightUtc - now) / 3600000));
+    return `${t.daily_limit} ${t.limit_reset(hoursLeft)}`;
+  }
+
   function getErrorMessage(errorCode, t) {
     const map = {
       network: t.error_network,
@@ -161,5 +176,6 @@
     getBiasDisplay,
     getClickbaitDisplay,
     getErrorMessage,
+    getLimitResetText,
   };
 })();

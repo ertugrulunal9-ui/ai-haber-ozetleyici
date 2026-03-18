@@ -142,6 +142,23 @@
     }
   }
 
+  function renderKeywords(refs, keywords = [], options = {}) {
+    const { hiddenClass = "hidden" } = options;
+    if (!refs.keywordsContainer) return;
+    refs.keywordsContainer.innerHTML = "";
+    if (!keywords.length) {
+      refs.keywordsContainer.classList.add(hiddenClass);
+      return;
+    }
+    refs.keywordsContainer.classList.remove(hiddenClass);
+    keywords.forEach((kw) => {
+      const tag = document.createElement("span");
+      tag.className = refs.keywordsContainer.dataset.tagClass || "aoz-keyword-tag";
+      tag.textContent = kw;
+      refs.keywordsContainer.appendChild(tag);
+    });
+  }
+
   function getShareUrl(summary) {
     const text = encodeURIComponent(`${summary.slice(0, 240)} (AI Ozet)`);
     return `https://twitter.com/intent/tweet?text=${text}`;
@@ -154,6 +171,7 @@
     resetResultPanels,
     renderBiasResult,
     renderClickbaitVote,
+    renderKeywords,
     getShareUrl,
   };
 })();

@@ -36,6 +36,8 @@
             <p class="aoz-summary-text"></p>
           </div>
 
+          <div class="aoz-keywords-container aoz-hidden" data-tag-class="aoz-keyword-tag"></div>
+
           <button type="button" class="aoz-bias-btn">${t.bias_btn}</button>
           <div class="aoz-bias-section aoz-hidden">
             <p class="aoz-label aoz-bias-section-label">${t.bias_title}</p>
@@ -76,6 +78,11 @@
             <button type="button" class="aoz-share-btn aoz-twitter-btn">${t.twitter_action}</button>
           </div>
 
+          <div class="aoz-share-row aoz-feedback-row">
+            <button type="button" class="aoz-share-btn aoz-feedback-good">${t.feedback_good}</button>
+            <button type="button" class="aoz-share-btn aoz-feedback-bad">${t.feedback_bad}</button>
+          </div>
+
           <div class="aoz-sources-section aoz-hidden">
             <p class="aoz-label aoz-sources-label">${t.sources_title}</p>
             <div class="aoz-sources-list"></div>
@@ -93,7 +100,7 @@
           <button type="button" class="aoz-back-btn">${t.back}</button>
         </div>
         <div class="aoz-limit-view aoz-hidden">
-          <p class="aoz-limit-text">${t.daily_limit}</p>
+          <p class="aoz-limit-text"></p>
           <button type="button" class="aoz-premium-btn aoz-hidden">${t.go_premium}</button>
         </div>
       </div>
@@ -116,6 +123,7 @@
       loadingText: sidebar.querySelector(".aoz-loading-text"),
       summaryLabel: sidebar.querySelector(".aoz-summary-label"),
       summaryText: sidebar.querySelector(".aoz-summary-text"),
+      keywordsContainer: sidebar.querySelector(".aoz-keywords-container"),
       biasButton: sidebar.querySelector(".aoz-bias-btn"),
       biasSection: sidebar.querySelector(".aoz-bias-section"),
       biasSectionLabel: sidebar.querySelector(".aoz-bias-section-label"),
@@ -134,6 +142,8 @@
       voteStats: sidebar.querySelector(".aoz-vote-stats"),
       copyButton: sidebar.querySelector(".aoz-copy-btn"),
       twitterButton: sidebar.querySelector(".aoz-twitter-btn"),
+      feedbackGoodButton: sidebar.querySelector(".aoz-feedback-good"),
+      feedbackBadButton: sidebar.querySelector(".aoz-feedback-bad"),
       sourcesSection: sidebar.querySelector(".aoz-sources-section"),
       sourcesLabel: sidebar.querySelector(".aoz-sources-label"),
       sourcesList: sidebar.querySelector(".aoz-sources-list"),
@@ -200,7 +210,7 @@
     refs.backButton.textContent = t.back;
     refs.premiumButton.textContent = t.go_premium;
     refs.historyLabel.textContent = t.history_label;
-    refs.limitText.textContent = t.daily_limit;
+    refs.limitText.textContent = globalThis.AozUi.getLimitResetText(t);
     surface.setUsageText(refs.usageText, t, currentRemaining);
   }
 

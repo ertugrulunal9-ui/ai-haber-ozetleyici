@@ -49,6 +49,9 @@
       limitText: document.getElementById("limitText"),
       premiumButton: document.getElementById("premiumBtn"),
       langButton: document.getElementById("langBtn"),
+      keywordsContainer: document.getElementById("keywordsContainer"),
+      feedbackGoodButton: document.getElementById("feedbackGoodBtn"),
+      feedbackBadButton: document.getElementById("feedbackBadBtn"),
     };
   }
 
@@ -82,7 +85,7 @@
     refs.biasObjectiveLabel.textContent = t.bias_objective;
     refs.biasEmotionalLabel.textContent = t.bias_emotional;
     refs.historyLabel.textContent = t.history_label;
-    refs.limitText.textContent = t.daily_limit;
+    refs.limitText.textContent = globalThis.AozUi.getLimitResetText(t);
     surface.setUsageText(refs.usageText, t, currentRemaining);
   }
 

@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export type Action = "usage" | "summarize" | "ask" | "analyze" | "vote" | "getvotes";
+export type Action = "usage" | "summarize" | "ask" | "analyze" | "vote" | "getvotes" | "feedback";
 export type Lang = "tr" | "en";
 export type UsageBucket = "summary" | "assistant";
 
@@ -13,6 +13,7 @@ export type ParsedRequest = {
   question: string;
   url: string;
   isClickbait: boolean | null;
+  rating: boolean | null;
 };
 
 export type LimitBucketState = {

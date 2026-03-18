@@ -1,9 +1,9 @@
-import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertStringIncludes } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { buildPrompt } from "./prompt.ts";
 import { ParsedRequest } from "./types.ts";
 
 function makeInput(overrides: Partial<ParsedRequest> = {}): ParsedRequest {
-  return {
+  const defaults: ParsedRequest = {
     action: "summarize",
     deviceId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     lang: "tr",
@@ -12,7 +12,14 @@ function makeInput(overrides: Partial<ParsedRequest> = {}): ParsedRequest {
     question: "",
     url: "",
     isClickbait: null,
+    rating: null,
+  };
+
+  return {
+    ...defaults,
     ...overrides,
+    isClickbait: overrides.isClickbait ?? defaults.isClickbait,
+    rating: overrides.rating ?? defaults.rating,
   };
 }
 

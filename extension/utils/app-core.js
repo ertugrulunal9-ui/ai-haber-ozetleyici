@@ -50,7 +50,15 @@
     return response?.ok ? response.data : [];
   }
 
-  async function summarizeArticle({ article, lang, deviceId }) {
+  async function summarizeArticle({ article, lang, deviceId, skipCache }) {
+    if (!skipCache && article.url) {
+      const cached = await clientState.getCachedSummary(article.url);
+      if (cached) {
+        await clientState.setLastResult(cached);
+        return { remaining: null, historyItem: cached, fromCache: true };
+      }
+    }
+
     const result = await requestApi({
       action: "summarize",
       text: article.text,
@@ -66,12 +74,16 @@
     const historyItem = {
       title: article.title,
       summary: result.summary,
+      keywords: result.keywords || [],
       sources,
       article,
     };
 
     await clientState.setLastResult(historyItem);
     await clientState.saveToHistory(historyItem);
+    if (article.url) {
+      await clientState.setCachedSummary(article.url, historyItem);
+    }
 
     return { ...result, historyItem };
   }
@@ -107,6 +119,10 @@
     return requestApi({ action: "vote", url, deviceId, is_clickbait });
   }
 
+  async function submitFeedback({ url, deviceId, rating }) {
+    return requestApi({ action: "feedback", url, deviceId, rating });
+  }
+
   globalThis.AozAppCore = {
     getDeviceId: clientState.getDeviceId,
     getLang: clientState.getLang,
@@ -123,5 +139,6 @@
     analyzeArticle,
     getVotes,
     submitVote,
+    submitFeedback,
   };
 })();

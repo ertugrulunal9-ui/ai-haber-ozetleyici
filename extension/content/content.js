@@ -1,6 +1,6 @@
 (() => {
 const appCore = globalThis.AozAppCore;
-const { getTranslations, getErrorMessage } = globalThis.AozUi;
+const { getTranslations, getErrorMessage, getLimitResetText } = globalThis.AozUi;
 const surface = globalThis.AozSummarySurface;
 const sidebarUi = globalThis.AozSidebarUi;
 const { extractArticle } = globalThis.AozExtractor;
@@ -43,6 +43,7 @@ function renderResult(state, item) {
 
   state.refs.summaryText.textContent = state.currentItem.summary;
   surface.resetResultPanels(state.refs, state.t, { hiddenClass: "aoz-hidden" });
+  surface.renderKeywords(state.refs, state.currentItem.keywords || [], { hiddenClass: "aoz-hidden" });
   surface.renderSources(state.refs, state.t, state.currentItem.sources, {
     hiddenClass: "aoz-hidden",
     linkClassName: "aoz-source-item",
@@ -260,6 +261,19 @@ async function handleSidebarVote(state, isClickbait) {
   }
 }
 
+async function handleSidebarFeedback(state, rating) {
+  if (!state.currentItem?.article?.url) return;
+  state.refs.feedbackGoodButton.disabled = true;
+  state.refs.feedbackBadButton.disabled = true;
+  await appCore.submitFeedback({
+    url: state.currentItem.article.url,
+    deviceId: state.deviceId,
+    rating,
+  });
+  state.refs.feedbackGoodButton.textContent = state.t.feedback_thanks;
+  state.refs.feedbackBadButton.textContent = "";
+}
+
 function handleSidebarPremiumClick() {
   // Premium not yet available — button is hidden
 }
@@ -279,6 +293,8 @@ function bindSidebarSummaryActions(state) {
   state.refs.qaButton.addEventListener("click", () => handleSidebarQaSubmit(state));
   state.refs.qaInput.addEventListener("keydown", (event) => handleSidebarQaKeydown(state, event));
   state.refs.biasButton.addEventListener("click", () => handleSidebarBiasClick(state));
+  state.refs.feedbackGoodButton.addEventListener("click", () => handleSidebarFeedback(state, true));
+  state.refs.feedbackBadButton.addEventListener("click", () => handleSidebarFeedback(state, false));
 }
 
 function bindSidebarVoteActions(state) {

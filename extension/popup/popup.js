@@ -1,5 +1,5 @@
 const appCore = globalThis.AozAppCore;
-const { getTranslations, getErrorMessage } = globalThis.AozUi;
+const { getTranslations, getErrorMessage, getLimitResetText } = globalThis.AozUi;
 const surface = globalThis.AozSummarySurface;
 const popupUi = globalThis.AozPopupUi;
 
@@ -33,6 +33,7 @@ function renderResult(item) {
   state.currentItem = item;
   state.refs.summaryText.textContent = item.summary;
   surface.resetResultPanels(state.refs, state.t);
+  surface.renderKeywords(state.refs, item.keywords || []);
   surface.renderSources(state.refs, state.t, item.sources || [], { wrapTag: "li" });
   renderClickbait();
   popupUi.showPopupView(state.refs, "result");
@@ -257,6 +258,19 @@ async function handleLangToggle() {
   await init();
 }
 
+async function handleFeedback(rating) {
+  if (!state.currentItem?.article?.url) return;
+  state.refs.feedbackGoodButton.disabled = true;
+  state.refs.feedbackBadButton.disabled = true;
+  await appCore.submitFeedback({
+    url: state.currentItem.article.url,
+    deviceId: state.deviceId,
+    rating,
+  });
+  state.refs.feedbackGoodButton.textContent = state.t.feedback_thanks;
+  state.refs.feedbackBadButton.textContent = "";
+}
+
 function handlePremiumClick() {
   // Premium not yet available — button is hidden
 }
@@ -273,6 +287,8 @@ function bindPopupEvents() {
   state.refs.backButton.addEventListener("click", handleBackClick);
   state.refs.langButton.addEventListener("click", handleLangToggle);
   state.refs.premiumButton.addEventListener("click", handlePremiumClick);
+  state.refs.feedbackGoodButton.addEventListener("click", () => handleFeedback(true));
+  state.refs.feedbackBadButton.addEventListener("click", () => handleFeedback(false));
 }
 
 bindPopupEvents();

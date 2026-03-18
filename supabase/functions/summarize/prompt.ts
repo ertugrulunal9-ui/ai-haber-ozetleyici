@@ -28,8 +28,8 @@ export function buildPrompt(input: ParsedRequest, mode: PromptMode): OpenAiPromp
 
   return {
     systemPrompt: input.lang === "tr"
-      ? "Haber metnini Turkce olarak ozetle. Kim, ne, nerede, ne zaman sorularini yanitla; kisi adlari, kurumlar, sayilar ve somut detaylari mutlaka dahil et. 3-4 cumle yaz. Sadece ozeti yaz, baska hicbir sey ekleme."
-      : "Summarize the news article in English. Answer who, what, where, and when. Include specific names, organizations, numbers, and concrete details. Write 3-4 sentences. Write only the summary.",
+      ? 'Haber metnini Turkce olarak ozetle. Kim, ne, nerede, ne zaman sorularini yanitla; kisi adlari, kurumlar, sayilar ve somut detaylari mutlaka dahil et. 3-4 cumle yaz. Son satira "KEYWORDS:" yazip virgülle ayrılmış 3-5 anahtar kelime ekle.'
+      : 'Summarize the news article in English. Answer who, what, where, and when. Include specific names, organizations, numbers, and concrete details. Write 3-4 sentences. On the last line write "KEYWORDS:" followed by 3-5 comma-separated keywords.',
     userContent: `Baslik: ${input.title}\n\n${input.text}`,
   };
 }

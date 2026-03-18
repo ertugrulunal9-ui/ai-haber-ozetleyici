@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { parseRequest, parseRawBody } from "./request.ts";
 import { HttpError } from "./errors.ts";
 

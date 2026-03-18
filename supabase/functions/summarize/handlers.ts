@@ -15,16 +15,17 @@ export const actionHandlers: Record<Action, ActionHandler> = {
   usage: handleUsage,
   getvotes: handleGetVotes,
   vote: handleVote,
+  feedback: handleFeedback,
   summarize: handleSummarize,
   ask: handleAsk,
   analyze: handleAnalyze,
 };
 
-async function handleUsage(
+function handleUsage(
   _ctx: HandlerContext,
   _input: ParsedRequest,
 ): Promise<HandlerResult> {
-  return { body: {} };
+  return Promise.resolve({ body: {} });
 }
 
 async function handleSummarize(
@@ -35,9 +36,10 @@ async function handleSummarize(
   requireNonEmptyString(input.text);
 
   const output = await runOpenAi(buildPrompt(input, "summarize"));
+  const { summary, keywords } = parseSummaryOutput(output);
 
   return {
-    body: { summary: output },
+    body: { summary, keywords },
     incrementUsageBucket: "summary",
   };
 }
@@ -71,6 +73,42 @@ async function handleAnalyze(
     body: parseAnalyzeOutput(output),
     incrementUsageBucket: "assistant",
   };
+}
+
+async function handleFeedback(
+  ctx: HandlerContext,
+  input: ParsedRequest,
+): Promise<HandlerResult> {
+  if (input.rating === null || !input.url) {
+    throw new HttpError(400, { error: "bad_request" });
+  }
+
+  await ctx.db.from("summary_feedback").upsert(
+    {
+      url: input.url,
+      device_id: input.deviceId,
+      rating: input.rating,
+      created_at: new Date().toISOString(),
+    },
+    { onConflict: "url,device_id" },
+  );
+
+  return { body: { ok: true } };
+}
+
+function parseSummaryOutput(output: string): { summary: string; keywords: string[] } {
+  const keywordMatch = output.match(/KEYWORDS:\s*(.+)/i);
+  if (!keywordMatch) {
+    return { summary: output.trim(), keywords: [] };
+  }
+
+  const summary = output.slice(0, keywordMatch.index).trim();
+  const keywords = keywordMatch[1]
+    .split(",")
+    .map((k) => k.trim())
+    .filter((k) => k.length > 0);
+
+  return { summary, keywords };
 }
 
 function requireNonEmptyString(value: string): void {

@@ -45,6 +45,7 @@ export function parseRequest(body: unknown): ParsedRequest {
     question: readOptionalString(record.question, 500),
     url: readOptionalString(record.url, 2048),
     isClickbait: typeof record.is_clickbait === "boolean" ? record.is_clickbait : null,
+    rating: typeof record.rating === "boolean" ? record.rating : null,
   };
 }
 
@@ -56,7 +57,8 @@ function parseAction(value: unknown): Action {
     action === "ask" ||
     action === "analyze" ||
     action === "vote" ||
-    action === "getvotes"
+    action === "getvotes" ||
+    action === "feedback"
   ) {
     return action;
   }

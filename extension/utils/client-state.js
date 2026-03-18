@@ -41,6 +41,21 @@
     await chrome.storage.local.remove("lastResult");
   }
 
+  async function getCachedSummary(url) {
+    const { summaryCache = {} } = await chrome.storage.local.get("summaryCache");
+    return summaryCache[url] || null;
+  }
+
+  async function setCachedSummary(url, item) {
+    const { summaryCache = {} } = await chrome.storage.local.get("summaryCache");
+    const keys = Object.keys(summaryCache);
+    if (keys.length >= 50) {
+      delete summaryCache[keys[0]];
+    }
+    summaryCache[url] = { ...item, cachedAt: Date.now() };
+    await chrome.storage.local.set({ summaryCache });
+  }
+
   globalThis.AozClientState = {
     getDeviceId,
     getLang,
@@ -50,5 +65,7 @@
     getLastResult,
     setLastResult,
     clearLastResult,
+    getCachedSummary,
+    setCachedSummary,
   };
 })();
