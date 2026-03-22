@@ -1,4 +1,5 @@
 import { HttpError } from "./errors.ts";
+import { assertLightweightRateLimit } from "./limits.ts";
 import { HandlerContext, HandlerResult, ParsedRequest } from "./types.ts";
 
 export async function handleGetVotes(
@@ -8,6 +9,7 @@ export async function handleGetVotes(
   if (!input.url) {
     throw new HttpError(400, { error: "bad_request" });
   }
+  await assertLightweightRateLimit(ctx.db, ctx.today, ctx.limits.clientIp, "getvotes");
 
   const { data, error } = await ctx.db
     .from("article_votes")
@@ -21,7 +23,7 @@ export async function handleGetVotes(
   const votes = data ?? [];
   const clickbait = votes.filter((vote: { is_clickbait: boolean }) => vote.is_clickbait).length;
   const userVote =
-    votes.find((vote: { device_id: string }) => vote.device_id === input.deviceId)?.is_clickbait ?? null;
+    votes.find((vote: { device_id: string }) => vote.device_id === ctx.userId)?.is_clickbait ?? null;
 
   return {
     body: {
@@ -39,11 +41,12 @@ export async function handleVote(
   if (!input.url || input.isClickbait === null) {
     throw new HttpError(400, { error: "bad_request" });
   }
+  await assertLightweightRateLimit(ctx.db, ctx.today, ctx.limits.clientIp, "vote");
 
   const upsertResult = await ctx.db.from("article_votes").upsert(
     {
       url: input.url,
-      device_id: input.deviceId,
+      device_id: ctx.userId,
       is_clickbait: input.isClickbait,
     },
     { onConflict: "url,device_id" },

@@ -1,8 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 export type Action = "usage" | "summarize" | "ask" | "analyze" | "vote" | "getvotes" | "feedback";
 export type Lang = "tr" | "en";
 export type UsageBucket = "summary" | "assistant";
+export type LightweightAction = "vote" | "feedback" | "getvotes";
 
 export type ParsedRequest = {
   action: Action;
@@ -30,12 +29,13 @@ export type LimitState = {
   assistant: LimitBucketState;
 };
 
-export type DbClient = ReturnType<typeof createClient>;
+export type DbClient = any;
 
 export type HandlerContext = {
   db: DbClient;
   today: string;
   limits: LimitState;
+  userId: string;
 };
 
 export type HandlerResult = {

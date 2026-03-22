@@ -17,6 +17,7 @@
       error_ai: "AI servisi şu anda yanıt veremiyor. Biraz sonra tekrar dene.",
       error_server: "Sunucu hatası. Lütfen daha sonra tekrar dene.",
       error_unauthorized: "İstek doğrulanamadı. Eklentiyi güncelle.",
+      error_rate_limited: "Çok hızlı istek gönderiyorsun. Birkaç dakika sonra tekrar dene.",
       bias_btn: "⚖ Taraflılık Analizi",
       bias_loading: "Analiz ediliyor...",
       bias_title: "TARAFLILIK ANALİZİ",
@@ -97,6 +98,7 @@
       error_ai: "AI service is not responding. Try again shortly.",
       error_server: "Server error. Please try again later.",
       error_unauthorized: "Request could not be verified. Update the extension.",
+      error_rate_limited: "You're sending requests too quickly. Try again in a few minutes.",
       bias_btn: "⚖ Bias Analysis",
       bias_loading: "Analyzing...",
       bias_title: "BIAS ANALYSIS",
@@ -229,6 +231,16 @@
     return `${t.daily_limit} ${t.limit_reset(hoursLeft)}`;
   }
 
+  function escapeHtml(str) {
+    if (typeof str !== "string") return String(str);
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;");
+  }
+
   function getErrorMessage(errorCode, t) {
     const map = {
       network: t.error_network,
@@ -237,10 +249,20 @@
       internal_error: t.error_server,
       db_error: t.error_server,
       unauthorized: t.error_unauthorized,
+      auth_config: t.error_unauthorized,
+      not_article: t.not_article,
       limit: t.daily_limit,
       assistant_limit: t.assistant_limit,
+      rate_limited: t.error_rate_limited,
     };
     return map[errorCode] || t.error_generic;
+  }
+
+  function createEl(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text != null) el.textContent = String(text);
+    return el;
   }
 
   globalThis.AozUi = {
@@ -249,5 +271,7 @@
     getClickbaitDisplay,
     getErrorMessage,
     getLimitResetText,
+    escapeHtml,
+    createEl,
   };
 })();

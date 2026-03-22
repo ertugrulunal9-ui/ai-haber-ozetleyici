@@ -87,4 +87,20 @@ describe("parseRssItems", () => {
     const items = parseRssItemsFn(xml);
     expect(items[0].source).toBe("Source Name");
   });
+
+  it("filters non-http source links", () => {
+    const xml = `
+      <item>
+        <title>Unsafe</title>
+        <link>javascript:alert(1)</link>
+      </item>
+      <item>
+        <title>Safe</title>
+        <link>https://example.com/safe</link>
+      </item>
+    `;
+    const items = parseRssItemsFn(xml);
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("Safe");
+  });
 });

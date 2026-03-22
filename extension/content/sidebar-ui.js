@@ -5,6 +5,8 @@
     throw new Error("AozSummarySurface is not loaded.");
   }
 
+  let sidebarStylesPromise;
+
   function createSidebarMarkup(t, lang) {
     return `
       <div class="aoz-header">
@@ -255,7 +257,17 @@
     };
   }
 
-  function createSidebarShell(t, lang) {
+  async function createSidebarShell(t, lang) {
+    const styles = await getSidebarStyles();
+    const host = document.createElement("div");
+    host.id = "aoz-root-host";
+    host.setAttribute("style", "all: initial !important; display: block !important;");
+
+    const shadowRoot = host.attachShadow({ mode: "closed" });
+    const styleTag = document.createElement("style");
+    styleTag.textContent = styles;
+    shadowRoot.appendChild(styleTag);
+
     const sidebar = document.createElement("div");
     sidebar.id = "aoz-sidebar";
     sidebar.innerHTML = createSidebarMarkup(t, lang);
@@ -266,11 +278,23 @@
     tab.textContent = "AI Ozet";
     tab.classList.add("aoz-hidden");
 
+    shadowRoot.appendChild(sidebar);
+    shadowRoot.appendChild(tab);
+
     return {
-      sidebar,
-      tab,
+      host,
       refs: collectSidebarRefs(sidebar, tab),
     };
+  }
+
+  function getSidebarStyles() {
+    if (!sidebarStylesPromise) {
+      sidebarStylesPromise = fetch(chrome.runtime.getURL("content/sidebar.css"))
+        .then((response) => response.ok ? response.text() : "")
+        .catch(() => "");
+    }
+
+    return sidebarStylesPromise;
   }
 
   function showSidebarView(refs, viewName) {

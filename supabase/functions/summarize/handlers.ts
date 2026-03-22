@@ -1,5 +1,5 @@
 import { HttpError } from "./errors.ts";
-import { assertAiRequestAllowed } from "./limits.ts";
+import { assertAiBurstRateLimit, assertAiRequestAllowed, assertLightweightRateLimit, assertUsageBurstRateLimit } from "./limits.ts";
 import { buildPrompt } from "./prompt.ts";
 import { parseAnalyzeOutput, runOpenAi } from "./openai.ts";
 import {
@@ -22,10 +22,10 @@ export const actionHandlers: Record<Action, ActionHandler> = {
 };
 
 function handleUsage(
-  _ctx: HandlerContext,
+  ctx: HandlerContext,
   _input: ParsedRequest,
 ): Promise<HandlerResult> {
-  return Promise.resolve({ body: {} });
+  return assertUsageBurstRateLimit(ctx.db, ctx.limits.clientIp).then(() => ({ body: {} }));
 }
 
 async function handleSummarize(
@@ -33,6 +33,7 @@ async function handleSummarize(
   input: ParsedRequest,
 ): Promise<HandlerResult> {
   assertAiRequestAllowed(ctx.limits, "summary");
+  await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "summary");
   requireNonEmptyString(input.text);
 
   const output = await runOpenAi(buildPrompt(input, "summarize"));
@@ -49,6 +50,7 @@ async function handleAsk(
   input: ParsedRequest,
 ): Promise<HandlerResult> {
   assertAiRequestAllowed(ctx.limits, "assistant");
+  await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "assistant");
   requireNonEmptyString(input.text);
   requireNonEmptyString(input.question);
 
@@ -65,6 +67,7 @@ async function handleAnalyze(
   input: ParsedRequest,
 ): Promise<HandlerResult> {
   assertAiRequestAllowed(ctx.limits, "assistant");
+  await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "assistant");
   requireNonEmptyString(input.text);
 
   const output = await runOpenAi(buildPrompt(input, "analyze"));
@@ -82,11 +85,12 @@ async function handleFeedback(
   if (input.rating === null || !input.url) {
     throw new HttpError(400, { error: "bad_request" });
   }
+  await assertLightweightRateLimit(ctx.db, ctx.today, ctx.limits.clientIp, "feedback");
 
   await ctx.db.from("summary_feedback").upsert(
     {
       url: input.url,
-      device_id: input.deviceId,
+      device_id: ctx.userId,
       rating: input.rating,
       created_at: new Date().toISOString(),
     },

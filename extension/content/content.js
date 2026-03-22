@@ -1,6 +1,6 @@
 (() => {
 const appCore = globalThis.AozAppCore;
-const { getTranslations, getErrorMessage, getLimitResetText } = globalThis.AozUi;
+const { getTranslations, getErrorMessage, getLimitResetText, createEl } = globalThis.AozUi;
 const surface = globalThis.AozSummarySurface;
 const sidebarUi = globalThis.AozSidebarUi;
 const { extractArticle } = globalThis.AozExtractor;
@@ -414,20 +414,36 @@ async function handleSidebarStatsClick(state) {
       ? allReadings.reduce((s, r) => s + r.emotional, 0) / allReadings.length
       : null;
 
-    let html = `<p class="aoz-stats-bias-desc">${state.t.bias_map_desc}</p>`;
+    const biasContainer = state.refs.statsBiasContent;
+    biasContainer.textContent = "";
+    biasContainer.appendChild(createEl("p", "aoz-stats-bias-desc", state.t.bias_map_desc));
 
     if (avgP !== null) {
       const pLabel = statsEngine.computeBiasLabel(avgP, state.lang);
       const eLabel = statsEngine.computeEmotionalLabel(avgE, state.lang);
       const pLeft = (((avgP + 100) / 200) * 100).toFixed(1);
 
-      html += `<p class="aoz-stats-bias-label">${state.t.bias_map_political_trend}: <strong>${pLabel}</strong></p>`;
-      html += `<div class="aoz-bias-bar aoz-political-bar" style="margin-bottom:10px"><div class="aoz-bias-dot" style="left:${pLeft}%"></div></div>`;
-      html += `<p class="aoz-stats-bias-label">${state.t.bias_map_emotional_trend}: <strong>${eLabel}</strong></p>`;
-      html += `<div class="aoz-bias-bar aoz-emotional-bar"><div class="aoz-bias-dot" style="left:${avgE.toFixed(1)}%"></div></div>`;
-    }
+      const pLabelEl = createEl("p", "aoz-stats-bias-label");
+      pLabelEl.append(`${state.t.bias_map_political_trend}: `, createEl("strong", null, pLabel));
+      biasContainer.appendChild(pLabelEl);
 
-    state.refs.statsBiasContent.innerHTML = html;
+      const pBar = createEl("div", "aoz-bias-bar aoz-political-bar");
+      pBar.style.marginBottom = "10px";
+      const pDot = createEl("div", "aoz-bias-dot");
+      pDot.style.left = `${pLeft}%`;
+      pBar.appendChild(pDot);
+      biasContainer.appendChild(pBar);
+
+      const eLabelEl = createEl("p", "aoz-stats-bias-label");
+      eLabelEl.append(`${state.t.bias_map_emotional_trend}: `, createEl("strong", null, eLabel));
+      biasContainer.appendChild(eLabelEl);
+
+      const eBar = createEl("div", "aoz-bias-bar aoz-emotional-bar");
+      const eDot = createEl("div", "aoz-bias-dot");
+      eDot.style.left = `${avgE.toFixed(1)}%`;
+      eBar.appendChild(eDot);
+      biasContainer.appendChild(eBar);
+    }
     state.refs.statsBias.classList.remove("aoz-hidden");
   } else {
     state.refs.statsBias.classList.add("aoz-hidden");
@@ -437,9 +453,12 @@ async function handleSidebarStatsClick(state) {
   const topSources = statsEngine.computeTopSources(weekly.sources, 5);
   if (topSources.length > 0) {
     state.refs.statsSourcesTitle.textContent = state.t.stats_top_sources;
-    state.refs.statsSourcesList.innerHTML = topSources
-      .map((s) => `<div class="aoz-stats-source-row"><span class="aoz-stats-source-name">${s.name}</span><span class="aoz-stats-source-count">(${s.count})</span></div>`)
-      .join("");
+    state.refs.statsSourcesList.textContent = "";
+    for (const s of topSources) {
+      const row = createEl("div", "aoz-stats-source-row");
+      row.append(createEl("span", "aoz-stats-source-name", s.name), createEl("span", "aoz-stats-source-count", `(${s.count})`));
+      state.refs.statsSourcesList.appendChild(row);
+    }
     state.refs.statsSources.classList.remove("aoz-hidden");
   } else {
     state.refs.statsSources.classList.add("aoz-hidden");
@@ -453,12 +472,18 @@ async function handleSidebarStatsClick(state) {
 
   if (profileEntries.length > 0) {
     state.refs.statsProfilesTitle.textContent = state.t.source_profiles_title;
-    state.refs.statsProfilesList.innerHTML = profileEntries
-      .map(([name, p]) => {
-        const labels = statsEngine.getSourceBiasLabel(p, state.lang);
-        return `<div class="aoz-stats-profile-row"><span class="aoz-stats-source-name">${name}</span><span class="aoz-stats-source-bias">${labels.political}</span><span class="aoz-stats-source-emo">${labels.emotional}(${labels.emotionalValue})</span><span class="aoz-stats-source-count">${state.t.source_reads(p.totalReads)}</span></div>`;
-      })
-      .join("");
+    state.refs.statsProfilesList.textContent = "";
+    for (const [name, p] of profileEntries) {
+      const labels = statsEngine.getSourceBiasLabel(p, state.lang);
+      const row = createEl("div", "aoz-stats-profile-row");
+      row.append(
+        createEl("span", "aoz-stats-source-name", name),
+        createEl("span", "aoz-stats-source-bias", labels.political),
+        createEl("span", "aoz-stats-source-emo", `${labels.emotional}(${labels.emotionalValue})`),
+        createEl("span", "aoz-stats-source-count", state.t.source_reads(p.totalReads)),
+      );
+      state.refs.statsProfilesList.appendChild(row);
+    }
     state.refs.statsProfiles.classList.remove("aoz-hidden");
   } else {
     state.refs.statsProfiles.classList.add("aoz-hidden");
@@ -524,7 +549,7 @@ async function bootstrapSidebar(state) {
 }
 
 async function initSidebar() {
-  if (document.getElementById("aoz-sidebar")) {
+  if (document.getElementById("aoz-root-host")) {
     return;
   }
 
@@ -535,10 +560,9 @@ async function initSidebar() {
 
   const deviceId = await appCore.getDeviceId();
   const lang = await appCore.getLang();
-  const shell = sidebarUi.createSidebarShell(getTranslations(lang, "sidebar"), lang);
+  const shell = await sidebarUi.createSidebarShell(getTranslations(lang, "sidebar"), lang);
 
-  document.body.appendChild(shell.sidebar);
-  document.body.appendChild(shell.tab);
+  document.body.appendChild(shell.host);
 
   const state = createSidebarState(baseArticle, shell, deviceId, lang);
 

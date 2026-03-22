@@ -72,8 +72,13 @@
     }
 
     sources.forEach(({ title, link, source }) => {
+      const safeLink = toSafeExternalUrl(link);
+      if (!safeLink) {
+        return;
+      }
+
       const anchor = document.createElement("a");
-      anchor.href = link;
+      anchor.href = safeLink;
       anchor.target = "_blank";
       anchor.rel = "noopener noreferrer";
       anchor.textContent = `${source ? `[${source}] ` : ""}${title}`;
@@ -91,6 +96,11 @@
       wrapper.appendChild(anchor);
       refs.sourcesList.appendChild(wrapper);
     });
+
+    if (refs.sourcesList.childElementCount === 0) {
+      sectionNode.classList.add(hiddenClass);
+      return;
+    }
 
     sectionNode.classList.remove(hiddenClass);
   }
@@ -164,6 +174,18 @@
     return `https://twitter.com/intent/tweet?text=${text}`;
   }
 
+  function toSafeExternalUrl(value) {
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return "";
+      }
+      return parsed.toString();
+    } catch {
+      return "";
+    }
+  }
+
   globalThis.AozSummarySurface = {
     setUsageText,
     renderHistoryList,
@@ -173,5 +195,6 @@
     renderClickbaitVote,
     renderKeywords,
     getShareUrl,
+    toSafeExternalUrl,
   };
 })();

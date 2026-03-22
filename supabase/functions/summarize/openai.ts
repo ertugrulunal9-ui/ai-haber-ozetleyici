@@ -58,13 +58,20 @@ export function parseAnalyzeOutput(
       note?: unknown;
     };
 
-    if (typeof parsed.note !== "string") {
-      throw new Error("invalid_note");
+    const political = Number(parsed.political);
+    const emotional = Number(parsed.emotional);
+
+    if (
+      typeof parsed.note !== "string" ||
+      !Number.isFinite(political) ||
+      !Number.isFinite(emotional)
+    ) {
+      throw new Error("invalid_fields");
     }
 
     return {
-      political: Number(parsed.political),
-      emotional: Number(parsed.emotional),
+      political: Math.max(-100, Math.min(100, Math.round(political))),
+      emotional: Math.max(0, Math.min(100, Math.round(emotional))),
       note: parsed.note.trim(),
     };
   } catch {

@@ -50,6 +50,11 @@
     return response?.ok ? response.data : [];
   }
 
+  async function setPublishableKey(publishableKey) {
+    const response = await sendMessage({ action: "setPublishableKey", publishableKey });
+    return response?.ok ? { ok: true } : { ok: false };
+  }
+
   async function summarizeArticle({ article, lang, deviceId, skipCache }) {
     if (!skipCache && article.url) {
       const cached = await clientState.getCachedSummary(article.url);
@@ -78,11 +83,12 @@
       sources,
       article,
     };
+    const storedHistoryItem = toStoredHistoryItem(historyItem);
 
-    await clientState.setLastResult(historyItem);
-    await clientState.saveToHistory(historyItem);
+    await clientState.setLastResult(storedHistoryItem);
+    await clientState.saveToHistory(storedHistoryItem);
     if (article.url) {
-      await clientState.setCachedSummary(article.url, historyItem);
+      await clientState.setCachedSummary(article.url, storedHistoryItem);
     }
 
     // Stats hooks
@@ -98,11 +104,16 @@
   }
 
   async function askQuestion({ article, lang, deviceId, question }) {
+    const articleForAi = await hydrateArticleForAi(article);
+    if (!articleForAi?.text) {
+      return { error: "not_article", remaining: null };
+    }
+
     const result = await requestApi({
       action: "ask",
-      text: article.text,
-      title: article.title,
-      url: article.url,
+      text: articleForAi.text,
+      title: articleForAi.title,
+      url: articleForAi.url,
       lang,
       deviceId,
       question,
@@ -114,11 +125,16 @@
   }
 
   async function analyzeArticle({ article, lang, deviceId }) {
+    const articleForAi = await hydrateArticleForAi(article);
+    if (!articleForAi?.text) {
+      return { error: "not_article", remaining: null };
+    }
+
     const result = await requestApi({
       action: "analyze",
-      text: article.text,
-      title: article.title,
-      url: article.url,
+      text: articleForAi.text,
+      title: articleForAi.title,
+      url: articleForAi.url,
       lang,
       deviceId,
     });
@@ -159,6 +175,54 @@
     return requestApi({ action: "feedback", url, deviceId, rating });
   }
 
+  async function hydrateArticleForAi(article) {
+    if (article?.text) {
+      return article;
+    }
+
+    const liveArticle = await getArticle();
+    if (!liveArticle?.text) {
+      return article;
+    }
+
+    if (article?.url && liveArticle.url && !sameArticleUrl(article.url, liveArticle.url)) {
+      return article;
+    }
+
+    return {
+      ...article,
+      title: article?.title || liveArticle.title,
+      text: liveArticle.text,
+      url: article?.url || liveArticle.url,
+    };
+  }
+
+  function sameArticleUrl(left, right) {
+    try {
+      return new URL(left).toString() === new URL(right).toString();
+    } catch {
+      return left === right;
+    }
+  }
+
+  function toStoredHistoryItem(item) {
+    return {
+      ...item,
+      article: toStoredArticle(item.article),
+    };
+  }
+
+  function toStoredArticle(article) {
+    if (!article) {
+      return null;
+    }
+
+    return {
+      title: article.title || "",
+      url: article.url || "",
+    };
+  }
+
   globalThis.AozAppCore = {
     getDeviceId: clientState.getDeviceId,
     getLang: clientState.getLang,
@@ -170,6 +234,7 @@
     getUsage,
     getArticle,
     fetchRelatedSources,
+    setPublishableKey,
     summarizeArticle,
     askQuestion,
     analyzeArticle,

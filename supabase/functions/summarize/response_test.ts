@@ -1,5 +1,23 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { corsHeaders, getClientIp, withRemaining } from "./response.ts";
+import { corsHeaders, getClientIp, isAllowedOrigin, withRemaining } from "./response.ts";
+
+const EXT_ORIGIN = "chrome-extension://jompmeahomjbfpbkhfokobijnflljkik";
+
+function withOrigin(value: string, fn: () => void | Promise<void>): () => Promise<void> {
+  return async () => {
+    const prev = Deno.env.get("ALLOWED_ORIGIN");
+    Deno.env.set("ALLOWED_ORIGIN", value);
+    try {
+      await fn();
+    } finally {
+      if (prev !== undefined) {
+        Deno.env.set("ALLOWED_ORIGIN", prev);
+      } else {
+        Deno.env.delete("ALLOWED_ORIGIN");
+      }
+    }
+  };
+}
 
 // --- withRemaining ---
 
@@ -34,6 +52,13 @@ Deno.test("getClientIp: no headers returns empty string", () => {
   assertEquals(getClientIp(req), "");
 });
 
+Deno.test("getClientIp: prefers x-real-ip over x-forwarded-for", () => {
+  const req = new Request("http://localhost", {
+    headers: { "x-real-ip": "10.0.0.1", "x-forwarded-for": "spoofed, 10.0.0.1" },
+  });
+  assertEquals(getClientIp(req), "10.0.0.1");
+});
+
 Deno.test("getClientIp: trims whitespace", () => {
   const req = new Request("http://localhost", {
     headers: { "x-forwarded-for": "  1.2.3.4  " },
@@ -41,31 +66,71 @@ Deno.test("getClientIp: trims whitespace", () => {
   assertEquals(getClientIp(req), "1.2.3.4");
 });
 
+// --- isAllowedOrigin ---
+
+Deno.test("isAllowedOrigin: matches configured extension origin", () => {
+  assertEquals(isAllowedOrigin(EXT_ORIGIN), true);
+});
+
+Deno.test("isAllowedOrigin: rejects non-listed origin", () => {
+  assertEquals(isAllowedOrigin("https://evil.com"), false);
+});
+
+Deno.test("isAllowedOrigin: rejects arbitrary chrome-extension origin", () => {
+  assertEquals(isAllowedOrigin("chrome-extension://aaaaaaaaaaaaaaaa"), false);
+});
+
+Deno.test(
+  "isAllowedOrigin: accepts any origin in wildcard mode",
+  withOrigin("*", () => {
+    assertEquals(isAllowedOrigin("https://anything.example"), true);
+  }),
+);
+
+Deno.test(
+  "isAllowedOrigin: rejects all origins when ALLOWED_ORIGIN is empty (fail closed)",
+  withOrigin("", () => {
+    assertEquals(isAllowedOrigin(EXT_ORIGIN), false);
+  }),
+);
+
 // --- corsHeaders ---
 
-Deno.test("corsHeaders: allowed origin returned", () => {
-  const headers = corsHeaders("chrome-extension://jompmeahomjbfpbkhfokobijnflljkik");
-  assertEquals(
-    headers["Access-Control-Allow-Origin"],
-    "chrome-extension://jompmeahomjbfpbkhfokobijnflljkik",
-  );
+Deno.test("corsHeaders: returns matching origin when allowlisted", () => {
+  const headers = corsHeaders(EXT_ORIGIN);
+  assertEquals(headers["Access-Control-Allow-Origin"], EXT_ORIGIN);
   assertEquals(headers["Vary"], "Origin");
 });
 
-Deno.test("corsHeaders: unknown origin returns empty", () => {
+Deno.test("corsHeaders: returns empty for unknown origin", () => {
   const headers = corsHeaders("https://evil.com");
   assertEquals(headers["Access-Control-Allow-Origin"], "");
 });
 
-Deno.test("corsHeaders: no origin returns empty", () => {
+Deno.test("corsHeaders: returns empty when no origin provided", () => {
   const headers = corsHeaders();
   assertEquals(headers["Access-Control-Allow-Origin"], "");
 });
 
-Deno.test("corsHeaders: includes required custom headers", () => {
+Deno.test(
+  "corsHeaders: returns * in wildcard mode",
+  withOrigin("*", () => {
+    const headers = corsHeaders("https://anything.example");
+    assertEquals(headers["Access-Control-Allow-Origin"], "*");
+  }),
+);
+
+Deno.test(
+  "corsHeaders: returns empty when ALLOWED_ORIGIN is empty (fail closed)",
+  withOrigin("", () => {
+    const headers = corsHeaders(EXT_ORIGIN);
+    assertEquals(headers["Access-Control-Allow-Origin"], "");
+  }),
+);
+
+Deno.test("corsHeaders: allows authorization and content-type headers", () => {
   const headers = corsHeaders();
   const allowed = headers["Access-Control-Allow-Headers"];
-  assertEquals(allowed.includes("x-app-signature"), true);
-  assertEquals(allowed.includes("x-app-timestamp"), true);
+  assertEquals(allowed.includes("authorization"), true);
   assertEquals(allowed.includes("content-type"), true);
 });

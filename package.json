@@ -2,7 +2,8 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:extension": "bash scripts/build-extension.sh"
   },
   "devDependencies": {
     "vitest": "^3.1.1"

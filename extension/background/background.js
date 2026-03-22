@@ -42,25 +42,19 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 const CONFIG = Object.freeze({
   EDGE_URL: "https://rvcvocdrcymiagulguvo.supabase.co/functions/v1/summarize",
   RSS_BASE: "https://news.google.com/rss/search?hl=tr&gl=TR&ceid=TR:tr&q=",
+  SUPABASE_PUBLISHABLE_KEY: "__SUPABASE_PUBLISHABLE_KEY__",
 });
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+const AUTH_STORAGE_KEY = "supabaseAuthSession";
+const AUTH_CONFIG_STORAGE_KEY = "supabasePublishableKey";
+const PUBLISHABLE_KEY_PLACEHOLDER = "__SUPABASE" + "_PUBLISHABLE_KEY__";
+const SESSION_REFRESH_BUFFER_SECONDS = 60;
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "getArticle") {
-    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-      if (!tab?.id) {
-        sendResponse(null);
-        return;
-      }
-
-      chrome.tabs.sendMessage(tab.id, { action: "extract" }, (result) => {
-        if (chrome.runtime.lastError) {
-          sendResponse(null);
-          return;
-        }
-
-        sendResponse(result || null);
-      });
-    });
+    extractArticleFromActiveTab()
+      .then((result) => sendResponse(result))
+      .catch(() => sendResponse(null));
     return true;
   }
 
@@ -74,14 +68,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "requestApi") {
     requestApi(msg.payload)
       .then((response) => sendResponse(response))
-      .catch(() => sendResponse({ ok: false, status: 0, data: { error: "network" } }));
+      .catch((error) => {
+        sendResponse({
+          ok: false,
+          status: error?.status || 0,
+          data: { error: error?.code || "network" },
+        });
+      });
+    return true;
+  }
+
+  if (msg.action === "setPublishableKey") {
+    setStoredPublishableKey(msg.publishableKey)
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
     return true;
   }
 });
 
-function getRequestHeaders() {
+function getRequestHeaders(accessToken) {
   return {
     "Content-Type": "application/json",
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
   };
 }
 
@@ -100,9 +108,20 @@ function parseRssItems(xml) {
   let match;
 
   while ((match = regex.exec(xml)) !== null) {
+    const link = match[2]?.trim() || "";
+
+    try {
+      const parsed = new URL(link);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+
     items.push({
       title: match[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").trim() || "",
-      link: match[2]?.trim() || "",
+      link,
       source: match[3]?.replace(/<!\[CDATA\[|\]\]>/g, "").trim() || "",
     });
   }
@@ -112,12 +131,13 @@ function parseRssItems(xml) {
 
 async function requestApi(payload) {
   const bodyString = JSON.stringify(payload);
+  let session = await ensureSupabaseSession();
+  let response = await fetchWithSession(bodyString, session.accessToken);
 
-  const response = await fetch(CONFIG.EDGE_URL, {
-    method: "POST",
-    headers: getRequestHeaders(),
-    body: bodyString,
-  });
+  if (response.status === 401) {
+    session = await ensureSupabaseSession({ forceRefresh: true });
+    response = await fetchWithSession(bodyString, session.accessToken);
+  }
 
   const data = await parseJson(response);
   return {
@@ -132,5 +152,220 @@ async function parseJson(response) {
     return await response.json();
   } catch {
     return { error: response.ok ? "bad_response" : "generic" };
+  }
+}
+
+async function extractArticleFromActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (!tab?.id || !isSupportedTabUrl(tab.url)) {
+    return null;
+  }
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["utils/extractor.js"],
+  });
+
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => globalThis.AozExtractor?.extractArticle?.() ?? null,
+  });
+
+  return result?.result ?? null;
+}
+
+async function fetchWithSession(bodyString, accessToken) {
+  return fetch(CONFIG.EDGE_URL, {
+    method: "POST",
+    headers: getRequestHeaders(accessToken),
+    body: bodyString,
+  });
+}
+
+async function ensureSupabaseSession(options = {}) {
+  const { forceRefresh = false } = options;
+  const currentSession = await getStoredAuthSession();
+
+  if (currentSession && !forceRefresh && !isSessionExpiringSoon(currentSession)) {
+    return currentSession;
+  }
+
+  if (currentSession?.refreshToken) {
+    try {
+      const refreshedSession = await refreshSupabaseSession(currentSession.refreshToken);
+      await setStoredAuthSession(refreshedSession);
+      return refreshedSession;
+    } catch {
+      await clearStoredAuthSession();
+    }
+  }
+
+  const newSession = await signInAnonymously();
+  await setStoredAuthSession(newSession);
+  return newSession;
+}
+
+async function signInAnonymously() {
+  const response = await fetch(getSupabaseAuthUrl("/signup"), {
+    method: "POST",
+    headers: await getAuthHeaders(),
+    body: JSON.stringify({ data: {} }),
+  });
+
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw createApiError("unauthorized", response.status, payload);
+  }
+
+  return normalizeAuthSession(payload);
+}
+
+async function refreshSupabaseSession(refreshToken) {
+  const response = await fetch(getSupabaseAuthUrl("/token?grant_type=refresh_token"), {
+    method: "POST",
+    headers: await getAuthHeaders(),
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw createApiError("unauthorized", response.status, payload);
+  }
+
+  return normalizeAuthSession(payload);
+}
+
+async function getStoredAuthSession() {
+  const stored = await chrome.storage.local.get(AUTH_STORAGE_KEY);
+  try {
+    return normalizeStoredAuthSession(stored[AUTH_STORAGE_KEY] ?? null);
+  } catch {
+    await clearStoredAuthSession();
+    return null;
+  }
+}
+
+async function setStoredAuthSession(session) {
+  await chrome.storage.local.set({
+    [AUTH_STORAGE_KEY]: {
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+      expiresAt: session.expiresAt,
+    },
+  });
+}
+
+async function clearStoredAuthSession() {
+  await chrome.storage.local.remove(AUTH_STORAGE_KEY);
+}
+
+async function setStoredPublishableKey(value) {
+  const key = typeof value === "string" ? value.trim() : "";
+  if (!key) {
+    throw createApiError("auth_config");
+  }
+
+  await chrome.storage.local.set({ [AUTH_CONFIG_STORAGE_KEY]: key });
+  await clearStoredAuthSession();
+}
+
+function normalizeStoredAuthSession(session) {
+  if (!session || typeof session !== "object") {
+    return null;
+  }
+
+  const accessToken = typeof session.accessToken === "string" ? session.accessToken.trim() : "";
+  const refreshToken = typeof session.refreshToken === "string" ? session.refreshToken.trim() : "";
+  const expiresAt = Number(session.expiresAt);
+
+  if (!accessToken || !refreshToken || !Number.isFinite(expiresAt) || expiresAt <= 0) {
+    throw createApiError("unauthorized");
+  }
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresAt,
+  };
+}
+
+function normalizeAuthSession(payload) {
+  const session = payload?.session && typeof payload.session === "object" ? payload.session : payload;
+  const accessToken = typeof session?.access_token === "string" ? session.access_token.trim() : "";
+  const refreshToken = typeof session?.refresh_token === "string" ? session.refresh_token.trim() : "";
+  const rawExpiresAt = Number(session?.expires_at);
+  const rawExpiresIn = Number(session?.expires_in);
+  const expiresAt =
+    Number.isFinite(rawExpiresAt) && rawExpiresAt > 0
+      ? rawExpiresAt
+      : Number.isFinite(rawExpiresIn) && rawExpiresIn > 0
+        ? Math.floor(Date.now() / 1000) + rawExpiresIn
+        : 0;
+
+  if (!accessToken || !refreshToken || !Number.isFinite(expiresAt) || expiresAt <= 0) {
+    throw createApiError("unauthorized");
+  }
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresAt,
+  };
+}
+
+function isSessionExpiringSoon(session) {
+  return session.expiresAt <= Math.floor(Date.now() / 1000) + SESSION_REFRESH_BUFFER_SECONDS;
+}
+
+async function getAuthHeaders() {
+  const publishableKey = await getPublishableKey();
+  return {
+    "Content-Type": "application/json",
+    apikey: publishableKey,
+    Authorization: `Bearer ${publishableKey}`,
+  };
+}
+
+async function getPublishableKey() {
+  const bundledKey = CONFIG.SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
+  if (bundledKey && bundledKey !== PUBLISHABLE_KEY_PLACEHOLDER) {
+    return bundledKey;
+  }
+
+  const stored = await chrome.storage.local.get(AUTH_CONFIG_STORAGE_KEY);
+  const storedKey = typeof stored[AUTH_CONFIG_STORAGE_KEY] === "string"
+    ? stored[AUTH_CONFIG_STORAGE_KEY].trim()
+    : "";
+
+  if (!storedKey) {
+    throw createApiError("auth_config");
+  }
+
+  return storedKey;
+}
+
+function getSupabaseAuthUrl(path) {
+  return `${new URL(CONFIG.EDGE_URL).origin}/auth/v1${path}`;
+}
+
+function createApiError(code, status = 0, details = null) {
+  const error = new Error(code);
+  error.code = code;
+  error.status = status;
+  error.details = details;
+  return error;
+}
+
+function isSupportedTabUrl(url) {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
   }
 }

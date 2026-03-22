@@ -1,5 +1,5 @@
 const appCore = globalThis.AozAppCore;
-const { getTranslations, getErrorMessage, getLimitResetText } = globalThis.AozUi;
+const { getTranslations, getErrorMessage, getLimitResetText, createEl } = globalThis.AozUi;
 const surface = globalThis.AozSummarySurface;
 const popupUi = globalThis.AozPopupUi;
 
@@ -10,6 +10,7 @@ const state = {
   t: getTranslations("tr", "popup"),
   currentItem: null,
   currentRemaining: undefined,
+  authPromptShown: false,
 };
 
 function setRemaining(nextRemaining) {
@@ -85,6 +86,9 @@ async function init() {
   applyTranslations();
 
   const usage = await refreshUsage();
+  if (await maybeConfigurePublishableKey(usage)) {
+    return init();
+  }
 
   // Phase 1: always render streak widget and daily report
   renderStreakWidget();
@@ -101,6 +105,26 @@ async function init() {
   const history = await appCore.getHistory();
   renderHistory(history);
   popupUi.showPopupView(state.refs, usage.remaining === 0 && history.length === 0 ? "limit" : "main");
+}
+
+async function maybeConfigurePublishableKey(result) {
+  if (result?.error !== "auth_config" || state.authPromptShown) {
+    return false;
+  }
+
+  state.authPromptShown = true;
+  const key = window.prompt("Supabase publishable key'i bir kez gir. Sonraki guncellemelerde tekrar istemez.", "");
+  if (!key) {
+    return false;
+  }
+
+  const saved = await appCore.setPublishableKey(key);
+  if (!saved?.ok) {
+    alert(state.t.error_unauthorized);
+    return false;
+  }
+
+  return true;
 }
 
 async function handleSummarizeClick() {
@@ -396,27 +420,47 @@ async function handleStatsClick() {
       ? allReadings.reduce((s, r) => s + r.emotional, 0) / allReadings.length
       : null;
 
-    let html = `<p class="stats-bias-desc">${state.t.bias_map_desc}</p>`;
+    const biasContainer = state.refs.statsBiasContent;
+    biasContainer.textContent = "";
+    biasContainer.appendChild(createEl("p", "stats-bias-desc", state.t.bias_map_desc));
 
-    // Political trend bar
     if (avgP !== null) {
       const pLabel = statsEngine.computeBiasLabel(avgP, state.lang);
       const eLabel = statsEngine.computeEmotionalLabel(avgE, state.lang);
       const pLeft = (((avgP + 100) / 200) * 100).toFixed(1);
       const eLeft = avgE.toFixed(1);
 
-      html += `
-        <p class="stats-bias-label">${state.t.bias_map_political_trend}: <strong>${pLabel}</strong></p>
-        <div class="stats-bias-bar-labels"><span>Sol</span><span>Merkez</span><span>Sağ</span></div>
-        <div class="bias-bar political-bar" style="position:relative;height:8px;border-radius:99px;background:linear-gradient(to right,#3b82f6,#22c55e,#ef4444);margin-bottom:12px;">
-          <div class="bias-dot" style="position:absolute;top:50%;left:${pLeft}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid #334155;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>
-        </div>
-        <p class="stats-bias-label">${state.t.bias_map_emotional_trend}: <strong>${eLabel}</strong></p>
-        <div class="stats-bias-bar-labels"><span>Nesnel</span><span>Orta</span><span>Duygusal</span></div>
-        <div class="bias-bar emotional-bar" style="position:relative;height:8px;border-radius:99px;background:linear-gradient(to right,#22c55e,#f59e0b,#ef4444);margin-bottom:8px;">
-          <div class="bias-dot" style="position:absolute;top:50%;left:${eLeft}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid #334155;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>
-        </div>
-      `;
+      const pLabelEl = createEl("p", "stats-bias-label");
+      pLabelEl.append(`${state.t.bias_map_political_trend}: `, createEl("strong", null, pLabel));
+      biasContainer.appendChild(pLabelEl);
+
+      const pBarLabels = createEl("div", "stats-bias-bar-labels");
+      pBarLabels.append(createEl("span", null, "Sol"), createEl("span", null, "Merkez"), createEl("span", null, "Sağ"));
+      biasContainer.appendChild(pBarLabels);
+
+      const pBar = createEl("div", "bias-bar political-bar");
+      pBar.style.cssText = "position:relative;height:8px;border-radius:99px;background:linear-gradient(to right,#3b82f6,#22c55e,#ef4444);margin-bottom:12px";
+      const pDot = createEl("div", "bias-dot");
+      pDot.style.cssText = "position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid #334155;box-shadow:0 2px 6px rgba(0,0,0,0.25)";
+      pDot.style.left = `${pLeft}%`;
+      pBar.appendChild(pDot);
+      biasContainer.appendChild(pBar);
+
+      const eLabelEl = createEl("p", "stats-bias-label");
+      eLabelEl.append(`${state.t.bias_map_emotional_trend}: `, createEl("strong", null, eLabel));
+      biasContainer.appendChild(eLabelEl);
+
+      const eBarLabels = createEl("div", "stats-bias-bar-labels");
+      eBarLabels.append(createEl("span", null, "Nesnel"), createEl("span", null, "Orta"), createEl("span", null, "Duygusal"));
+      biasContainer.appendChild(eBarLabels);
+
+      const eBar = createEl("div", "bias-bar emotional-bar");
+      eBar.style.cssText = "position:relative;height:8px;border-radius:99px;background:linear-gradient(to right,#22c55e,#f59e0b,#ef4444);margin-bottom:8px";
+      const eDot = createEl("div", "bias-dot");
+      eDot.style.cssText = "position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid #334155;box-shadow:0 2px 6px rgba(0,0,0,0.25)";
+      eDot.style.left = `${eLeft}%`;
+      eBar.appendChild(eDot);
+      biasContainer.appendChild(eBar);
 
       // Daily bar chart
       const dayLabels = { 0: "Pazar", 1: "Pazartesi", 2: "Salı", 3: "Çarşamba", 4: "Perşembe", 5: "Cuma", 6: "Cumartesi" };
@@ -425,24 +469,28 @@ async function handleStatsClick() {
       const daysWithData = biasData.filter((d) => d.count > 0);
 
       if (daysWithData.length > 1) {
-        html += `<p class="stats-bias-label" style="margin-top:8px">${state.t.bias_map_day_label}</p>`;
-        html += '<div class="stats-bias-daily">';
+        const dayLabelEl = createEl("p", "stats-bias-label", state.t.bias_map_day_label);
+        dayLabelEl.style.marginTop = "8px";
+        biasContainer.appendChild(dayLabelEl);
+
+        const dailyContainer = createEl("div", "stats-bias-daily");
         for (const d of daysWithData) {
           const dayOfWeek = new Date(d.date).getDay();
           const label = labels[dayOfWeek];
           const barWidth = Math.max(10, (((d.avgPolitical + 100) / 200) * 100));
           const biasLabel = statsEngine.computeBiasLabel(d.avgPolitical, state.lang);
-          html += `<div class="stats-bias-day-row">
-            <span class="stats-bias-day-label">${label}</span>
-            <div class="stats-bias-day-bar-wrap"><div class="stats-bias-day-bar" style="width:${barWidth}%"></div></div>
-            <span class="stats-bias-day-val">${biasLabel}</span>
-          </div>`;
+
+          const row = createEl("div", "stats-bias-day-row");
+          const barWrap = createEl("div", "stats-bias-day-bar-wrap");
+          const bar = createEl("div", "stats-bias-day-bar");
+          bar.style.width = `${barWidth}%`;
+          barWrap.appendChild(bar);
+          row.append(createEl("span", "stats-bias-day-label", label), barWrap, createEl("span", "stats-bias-day-val", biasLabel));
+          dailyContainer.appendChild(row);
         }
-        html += "</div>";
+        biasContainer.appendChild(dailyContainer);
       }
     }
-
-    state.refs.statsBiasContent.innerHTML = html;
     state.refs.statsBiasCard.classList.remove("hidden");
   } else {
     state.refs.statsBiasCard.classList.add("hidden");
@@ -452,9 +500,12 @@ async function handleStatsClick() {
   const topSources = statsEngine.computeTopSources(weekly.sources, 5);
   if (topSources.length > 0) {
     state.refs.statsSourcesTitle.textContent = state.t.stats_top_sources;
-    state.refs.statsSourcesList.innerHTML = topSources
-      .map((s) => `<div class="stats-source-row"><span class="stats-source-name">${s.name}</span><span class="stats-source-count">(${s.count})</span></div>`)
-      .join("");
+    state.refs.statsSourcesList.textContent = "";
+    for (const s of topSources) {
+      const row = createEl("div", "stats-source-row");
+      row.append(createEl("span", "stats-source-name", s.name), createEl("span", "stats-source-count", `(${s.count})`));
+      state.refs.statsSourcesList.appendChild(row);
+    }
     state.refs.statsSourcesCard.classList.remove("hidden");
   } else {
     state.refs.statsSourcesCard.classList.add("hidden");
@@ -468,17 +519,18 @@ async function handleStatsClick() {
 
   if (profileEntries.length > 0) {
     state.refs.statsSourceProfilesTitle.textContent = state.t.source_profiles_title;
-    state.refs.statsSourceProfilesList.innerHTML = profileEntries
-      .map(([name, p]) => {
-        const labels = statsEngine.getSourceBiasLabel(p, state.lang);
-        return `<div class="stats-source-profile-row">
-          <span class="stats-source-name">${name}</span>
-          <span class="stats-source-bias">${labels.political}</span>
-          <span class="stats-source-emo">${labels.emotional}(${labels.emotionalValue})</span>
-          <span class="stats-source-count">${state.t.source_reads(p.totalReads)}</span>
-        </div>`;
-      })
-      .join("");
+    state.refs.statsSourceProfilesList.textContent = "";
+    for (const [name, p] of profileEntries) {
+      const labels = statsEngine.getSourceBiasLabel(p, state.lang);
+      const row = createEl("div", "stats-source-profile-row");
+      row.append(
+        createEl("span", "stats-source-name", name),
+        createEl("span", "stats-source-bias", labels.political),
+        createEl("span", "stats-source-emo", `${labels.emotional}(${labels.emotionalValue})`),
+        createEl("span", "stats-source-count", state.t.source_reads(p.totalReads)),
+      );
+      state.refs.statsSourceProfilesList.appendChild(row);
+    }
     state.refs.statsSourceProfilesCard.classList.remove("hidden");
   } else {
     state.refs.statsSourceProfilesCard.classList.add("hidden");
