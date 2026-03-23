@@ -1,6 +1,6 @@
 # Privacy Policy — AI Haber Özetleyici (AI News Summarizer)
 
-**Last updated:** 2026-03-18
+**Last updated:** 2026-03-23
 
 ## What Data We Collect
 
@@ -14,12 +14,20 @@
 - This content is **not stored permanently**. It is forwarded to OpenAI's API for processing and discarded after the response is generated.
 
 ### Usage Data
-- We track daily request counts per device ID to enforce fair usage limits (10 summaries per day).
+- We track daily request counts per device ID to enforce fair usage limits (10 summaries and 10 assistant requests per day).
 - IP addresses are used temporarily for IP-level rate limiting and are not stored beyond the daily usage counter.
 
 ### Clickbait Votes
 - If you vote on whether a headline is clickbait, the article URL, your device ID, and your vote are stored.
 - This data is anonymous — it cannot be linked to your identity.
+
+### Summary Feedback
+- If you rate a summary (thumbs up/down), the article URL, your device ID, and your rating are stored.
+- This data is anonymous and used to improve summarization quality.
+
+### Authentication
+- The extension creates an anonymous session via Supabase Auth to authenticate API requests.
+- This session contains no personal information — it is tied to a random identifier, not to any account or email.
 
 ## What Data We Do NOT Collect
 
@@ -44,6 +52,7 @@ When fetching related sources, the article title (first 60 characters) is sent t
 
 - **Usage counts** are stored by date and automatically become irrelevant after each day.
 - **Clickbait votes** are retained indefinitely to maintain community vote totals.
+- **Summary feedback** is retained indefinitely to help improve summarization quality.
 - **Article content** is not stored — it is processed in-memory and discarded.
 
 ## Your Rights
