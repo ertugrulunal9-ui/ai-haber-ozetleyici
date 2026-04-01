@@ -5,6 +5,7 @@
 }
 
 #aoz-sidebar {
+  color-scheme: light !important;
   position: fixed !important;
   top: 80px !important;
   right: 0 !important;
