@@ -4,7 +4,7 @@
     const title = jsonLd?.title || getTitle();
     const text = jsonLd?.text || getBodyText();
     if (!text || text.length < 200) return null;
-    return { title, text: text.slice(0, 4000), url: window.location.href };
+    return { title, text: text.slice(0, 8000), url: window.location.href };
   }
 
   function extractFromJsonLd() {

@@ -20,7 +20,7 @@ export async function runOpenAi(prompt: OpenAiPrompt): Promise<string> {
           { role: "system", content: prompt.systemPrompt },
           { role: "user", content: prompt.userContent },
         ],
-        max_tokens: 450,
+        max_tokens: 600,
       }),
     });
   } catch {

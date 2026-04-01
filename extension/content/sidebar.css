@@ -216,14 +216,14 @@
 .aoz-summary-card {
   border: 1px solid #dbe7f5 !important;
   border-radius: 12px !important;
-  background: rgba(255, 255, 255, 0.9) !important;
+  background: #ffffff !important;
   padding: 11px 12px !important;
 }
 
 .aoz-summary-text {
   font-size: 13px !important;
   line-height: 1.6 !important;
-  color: #0f172a !important;
+  color: #000000 !important;
   margin: 0 !important;
   max-height: 165px !important;
   overflow: auto !important;
@@ -697,112 +697,4 @@
 .aoz-result-view,
 .aoz-limit-view {
   animation: aoz-fade-in 0.2s ease !important;
-}
-
-/* ── Dark Mode ─────────────────────────────────────────────────────── */
-
-@media (prefers-color-scheme: dark) {
-  #aoz-sidebar {
-    background:
-      radial-gradient(125% 95% at 100% 0%, #1e3a5f 0%, transparent 56%),
-      linear-gradient(160deg, #0f172a 0%, #1e293b 100%) !important;
-    border-color: #334155 !important;
-    color: #e2e8f0 !important;
-    box-shadow: -4px 4px 32px rgba(0, 0, 0, 0.4) !important;
-  }
-
-  .aoz-header {
-    background: rgba(30, 41, 59, 0.85) !important;
-    border-bottom-color: #334155 !important;
-  }
-
-  .aoz-logo-text { color: #e2e8f0 !important; }
-
-  .aoz-lang-btn { background: #334155 !important; color: #cbd5e1 !important; border-color: #475569 !important; }
-  .aoz-lang-btn:hover { background: #3b4c63 !important; border-color: #64748b !important; }
-
-  .aoz-close-btn { color: #64748b !important; }
-  .aoz-close-btn:hover { color: #94a3b8 !important; }
-
-  .aoz-usage-text { background: #1e293b !important; color: #94a3b8 !important; border-color: #334155 !important; }
-
-  .aoz-history-section { border-top-color: #334155 !important; }
-  .aoz-history-item { background: #1e293b !important; color: #e2e8f0 !important; border-color: #334155 !important; }
-  .aoz-history-item:hover { background: #273548 !important; border-color: #475569 !important; }
-
-  .aoz-label { color: #94a3b8 !important; }
-
-  .aoz-summary-card { background: rgba(30, 41, 59, 0.9) !important; border-color: #334155 !important; }
-  .aoz-summary-text { color: #e2e8f0 !important; }
-
-  .aoz-share-btn { background: #334155 !important; color: #cbd5e1 !important; border-color: #475569 !important; }
-  .aoz-share-btn:hover { background: #3b4c63 !important; border-color: #64748b !important; }
-
-  .aoz-source-item { background: #1e293b !important; color: #60a5fa !important; border-color: #334155 !important; }
-  .aoz-source-item:hover { background: #273548 !important; border-color: #475569 !important; }
-
-  .aoz-qa-section { background: rgba(30, 41, 59, 0.9) !important; border-color: #334155 !important; }
-  .aoz-qa-input { background: #334155 !important; color: #e2e8f0 !important; border-color: #475569 !important; }
-  .aoz-qa-input:focus { border-color: #60a5fa !important; box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important; }
-  .aoz-qa-answer { background: #334155 !important; color: #e2e8f0 !important; border-color: #475569 !important; }
-
-  .aoz-bias-btn { color: #94a3b8 !important; border-color: #475569 !important; }
-  .aoz-bias-btn:hover { background: #273548 !important; color: #e2e8f0 !important; border-color: #64748b !important; }
-
-  .aoz-bias-section { background: rgba(30, 41, 59, 0.9) !important; border-color: #334155 !important; }
-  .aoz-bias-note { color: #94a3b8 !important; border-top-color: #334155 !important; }
-  .aoz-bias-dot { background: #1e293b !important; border-color: #e2e8f0 !important; }
-
-  .aoz-clickbait-section { background: rgba(30, 41, 59, 0.9) !important; border-color: #334155 !important; }
-  .aoz-vote-btn { background: #334155 !important; color: #cbd5e1 !important; border-color: #475569 !important; }
-  .aoz-vote-btn:hover { background: #3b4c63 !important; border-color: #64748b !important; }
-  .aoz-vote-stats { color: #94a3b8 !important; }
-
-  .aoz-back-btn { background: #334155 !important; color: #e2e8f0 !important; border-color: #475569 !important; }
-  .aoz-back-btn:hover { background: #3b4c63 !important; }
-
-  .aoz-limit-text { background: #432310 !important; color: #fdba74 !important; border-color: #78350f !important; }
-
-  .aoz-loading-view p { color: #94a3b8 !important; }
-  .aoz-spinner { border-color: #334155 !important; border-top-color: #60a5fa !important; }
-
-  .aoz-bias-meter-labels { color: #94a3b8 !important; }
-
-  .aoz-keyword-tag { background: #1e3a5f !important; color: #93c5fd !important; }
-
-  /* Phase 1 dark mode */
-  .aoz-streak-widget { background: linear-gradient(135deg, #422006, #78350f) !important; border-color: #92400e !important; }
-  .aoz-streak-widget.aoz-streak-hot { background: linear-gradient(135deg, #431407, #7c2d12) !important; border-color: #c2410c !important; }
-  .aoz-streak-text { color: #fbbf24 !important; }
-  .aoz-streak-best { color: #f59e0b !important; }
-
-  .aoz-stats-btn { color: #94a3b8 !important; border-color: #475569 !important; }
-  .aoz-stats-btn:hover { background: #273548 !important; color: #e2e8f0 !important; border-color: #64748b !important; }
-
-  .aoz-daily-report { background: linear-gradient(135deg, #1e293b, #1e3a5f) !important; border-color: #334155 !important; }
-  .aoz-daily-report-title { color: #60a5fa !important; }
-  .aoz-daily-report-line1, .aoz-daily-report-line2 { color: #cbd5e1 !important; }
-  .aoz-daily-report-link { color: #60a5fa !important; }
-
-  .aoz-source-badge { background: #0c4a6e !important; border-color: #075985 !important; }
-  .aoz-source-badge-name { color: #bae6fd !important; }
-  .aoz-source-badge-bias { color: #60a5fa !important; }
-  .aoz-source-badge-emo-wrap { background: #334155 !important; }
-
-  .aoz-stats-streak-section { background: linear-gradient(135deg, #422006, #78350f) !important; border-color: #92400e !important; }
-  .aoz-stats-streak-row { color: #fbbf24 !important; }
-  .aoz-stats-streak-bar-wrap { background: #92400e !important; }
-  .aoz-stats-streak-best { color: #f59e0b !important; }
-
-  .aoz-stats-weekly, .aoz-stats-bias, .aoz-stats-sources, .aoz-stats-profiles { background: rgba(30,41,59,0.9) !important; border-color: #334155 !important; }
-  .aoz-stats-line { color: #e2e8f0 !important; }
-  .aoz-stats-no-data { color: #94a3b8 !important; }
-  .aoz-stats-bias-desc { color: #94a3b8 !important; }
-  .aoz-stats-bias-label { color: #94a3b8 !important; }
-  .aoz-stats-bias-label strong { color: #e2e8f0 !important; }
-  .aoz-stats-source-row, .aoz-stats-profile-row { border-bottom-color: #334155 !important; }
-  .aoz-stats-source-name { color: #e2e8f0 !important; }
-  .aoz-stats-source-count { color: #94a3b8 !important; }
-  .aoz-stats-source-bias { color: #60a5fa !important; }
-  .aoz-stats-source-emo { color: #fbbf24 !important; }
 }

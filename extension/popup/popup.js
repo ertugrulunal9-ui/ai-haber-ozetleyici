@@ -79,6 +79,24 @@ function applyTranslations() {
   renderClickbait();
 }
 
+function isSameUrl(a, b) {
+  if (!a || !b) return false;
+  try {
+    return new URL(a).toString() === new URL(b).toString();
+  } catch {
+    return a === b;
+  }
+}
+
+async function getCurrentTabUrl() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tab?.url || null;
+  } catch {
+    return null;
+  }
+}
+
 async function init() {
   state.deviceId = state.deviceId || await appCore.getDeviceId();
   state.lang = await appCore.getLang();
@@ -97,9 +115,13 @@ async function init() {
   const lastResult = await appCore.getLastResult();
 
   if (lastResult) {
-    renderResult(lastResult);
-    await loadVotes();
-    return;
+    const tabUrl = await getCurrentTabUrl();
+    if (isSameUrl(lastResult.article?.url, tabUrl)) {
+      renderResult(lastResult);
+      await loadVotes();
+      return;
+    }
+    await appCore.clearLastResult();
   }
 
   const history = await appCore.getHistory();

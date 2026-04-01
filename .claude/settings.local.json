@@ -8,7 +8,17 @@
       "Bash(supabase --version)",
       "Bash(npx supabase:*)",
       "Bash(supabase secrets:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(find /c/Users/Galile/ai-haber-ozetleyici -not -path */node_modules/* -not -path */.git/* -type f)",
+      "Bash(npm audit:*)",
+      "Bash(deno test:*)",
+      "Bash(find c:UsersGalileai-haber-ozetleyici -maxdepth 2 -name *.yml -o -name *.yaml -o -name *.toml)",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(chmod +x c:/Users/Galile/ai-haber-ozetleyici/scripts/build-extension.sh)",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS: %{http_code}\" -X POST \"https://rvcvocdrcymiagulguvo.supabase.co/functions/v1/summarize\" -H \"Content-Type: application/json\" -H \"Origin: chrome-extension://test\" -H \"Authorization: Bearer invalid_token\" -d '{\"\"action\"\":\"\"usage\"\",\"\"deviceId\"\":\"\"test\"\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP Status: %{http_code}\" -X POST \"https://rvcvocdrcymiagulguvo.supabase.co/functions/v1/summarize\" -H \"Content-Type: application/json\" -H \"Origin: chrome-extension://dpjfnlnmmkkgakojejohmfigkfkbdgbc\" -H \"Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6IjllMGVjYjMzLWU5ZTgtNDNmZS1hMTY0LWQ0NDcxOTk2MzYxMSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3J2Y3ZvY2RyY3ltaWFndWxndXZvLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJjY2YwYzY4NS04NmE3LTQ0OTktYjdlZi01YmQzMjVmN2VjNDMiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc0MzQyNDI3LCJpYXQiOjE3NzQzMzg4MjcsImVtYWlsIjoiIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnt9LCJ1c2VyX21ldGFkYXRhIjp7fSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJhbm9ueW1vdXMiLCJ0aW1lc3RhbXAiOjE3NzQzMzg4Mjd9XSwic2Vzc2lvbl9pZCI6ImNmMDA4MzI1LWUyNzMtNDMzZi05MjQ4LWVmZmRlOTM5YWZmMyIsImlzX2Fub255bW91cyI6dHJ1ZX0.R84eaTWKFlidBB1aZHb4F1MISKnLR3hM_aHL83XUlLPQotFHKmZGVpot-9NccF_yiVNd70cpmKIow603OYIPcw\" -d \"{\"\"action\"\":\"\"summarize\"\",\"\"title\"\":\"\"Test\"\",\"\"text\"\":\"\"Test article content for verification.\"\"}\")"
     ]
   }
 }
