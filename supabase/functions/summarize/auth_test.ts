@@ -33,7 +33,7 @@ Deno.test("verifyRequestSignature: rejects when origin is missing", async () => 
 
 Deno.test(
   "verifyRequestSignature: accepts any origin when wildcard mode is enabled",
-  withOrigin("*", async () => {
+  withOrigin("*", () => {
     const req = new Request("https://example.com", {
       method: "POST",
       headers: {
