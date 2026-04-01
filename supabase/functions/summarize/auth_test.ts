@@ -41,7 +41,7 @@ Deno.test(
         authorization: "Bearer token-123",
       },
     });
-    const token = await verifyRequestSignature(req, '{"test": true}');
+    const token = verifyRequestSignature(req, '{"test": true}');
     assertEquals(token, "token-123");
   }),
 );

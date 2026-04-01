@@ -29,7 +29,8 @@ export type LimitState = {
   assistant: LimitBucketState;
 };
 
-export type DbClient = any;
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+export type DbClient = SupabaseClient;
 
 export type HandlerContext = {
   db: DbClient;

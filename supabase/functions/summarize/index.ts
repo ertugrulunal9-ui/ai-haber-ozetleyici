@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
 
   try {
     const rawBody = await req.text();
-    const authToken = await verifyRequestSignature(req, rawBody);
+    const authToken = verifyRequestSignature(req, rawBody);
     const { data: userData, error: userError } = await supabaseAuth.auth.getUser(authToken);
 
     if (userError || !userData?.user?.id) {
