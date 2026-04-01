@@ -1,10 +1,10 @@
-import { assertEquals, assertRejects } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertEquals, assertThrows } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { verifyRequestSignature } from "./auth.ts";
 import { HttpError } from "./errors.ts";
 
 const EXT_ORIGIN = "chrome-extension://jompmeahomjbfpbkhfokobijnflljkik";
 
-function withOrigin(value: string, fn: () => Promise<void>): () => Promise<void> {
+function withOrigin(value: string, fn: () => void | Promise<void>): () => Promise<void> {
   return async () => {
     const prev = Deno.env.get("ALLOWED_ORIGIN");
     Deno.env.set("ALLOWED_ORIGIN", value);
@@ -20,12 +20,12 @@ function withOrigin(value: string, fn: () => Promise<void>): () => Promise<void>
   };
 }
 
-Deno.test("verifyRequestSignature: rejects when origin is missing", async () => {
+Deno.test("verifyRequestSignature: rejects when origin is missing", () => {
   const req = new Request("https://example.com", {
     method: "POST",
     headers: { authorization: "Bearer token-123" },
   });
-  await assertRejects(
+  assertThrows(
     () => verifyRequestSignature(req, '{"test": true}'),
     HttpError,
   );
@@ -46,18 +46,18 @@ Deno.test(
   }),
 );
 
-Deno.test("verifyRequestSignature: rejects when authorization header is missing", async () => {
+Deno.test("verifyRequestSignature: rejects when authorization header is missing", () => {
   const req = new Request("https://example.com", {
     method: "POST",
     headers: { origin: EXT_ORIGIN },
   });
-  await assertRejects(
+  assertThrows(
     () => verifyRequestSignature(req, '{"test": true}'),
     HttpError,
   );
 });
 
-Deno.test("verifyRequestSignature: rejects when bearer token is empty", async () => {
+Deno.test("verifyRequestSignature: rejects when bearer token is empty", () => {
   const req = new Request("https://example.com", {
     method: "POST",
     headers: {
@@ -65,13 +65,13 @@ Deno.test("verifyRequestSignature: rejects when bearer token is empty", async ()
       authorization: "Bearer   ",
     },
   });
-  await assertRejects(
+  assertThrows(
     () => verifyRequestSignature(req, '{"test": true}'),
     HttpError,
   );
 });
 
-Deno.test("verifyRequestSignature: returns bearer token for allowlisted extension origin", async () => {
+Deno.test("verifyRequestSignature: returns bearer token for allowlisted extension origin", () => {
   const req = new Request("https://example.com", {
     method: "POST",
     headers: {
@@ -79,11 +79,11 @@ Deno.test("verifyRequestSignature: returns bearer token for allowlisted extensio
       authorization: "Bearer token-123",
     },
   });
-  const token = await verifyRequestSignature(req, '{"test": true}');
+  const token = verifyRequestSignature(req, '{"test": true}');
   assertEquals(token, "token-123");
 });
 
-Deno.test("verifyRequestSignature: rejects non-allowlisted origin", async () => {
+Deno.test("verifyRequestSignature: rejects non-allowlisted origin", () => {
   const req = new Request("https://example.com", {
     method: "POST",
     headers: {
@@ -91,7 +91,7 @@ Deno.test("verifyRequestSignature: rejects non-allowlisted origin", async () => 
       authorization: "Bearer token-123",
     },
   });
-  await assertRejects(
+  assertThrows(
     () => verifyRequestSignature(req, '{"test": true}'),
     HttpError,
   );
@@ -99,7 +99,7 @@ Deno.test("verifyRequestSignature: rejects non-allowlisted origin", async () => 
 
 Deno.test(
   "verifyRequestSignature: rejects arbitrary chrome-extension origin not in allowlist",
-  async () => {
+  () => {
     const req = new Request("https://example.com", {
       method: "POST",
       headers: {
@@ -107,7 +107,7 @@ Deno.test(
         authorization: "Bearer token-123",
       },
     });
-    await assertRejects(
+    assertThrows(
       () => verifyRequestSignature(req, '{"test": true}'),
       HttpError,
     );
@@ -116,7 +116,7 @@ Deno.test(
 
 Deno.test(
   "verifyRequestSignature: rejects all origins when ALLOWED_ORIGIN is empty",
-  withOrigin("", async () => {
+  withOrigin("", () => {
     const req = new Request("https://example.com", {
       method: "POST",
       headers: {
@@ -124,7 +124,7 @@ Deno.test(
         authorization: "Bearer token-123",
       },
     });
-    await assertRejects(
+    assertThrows(
       () => verifyRequestSignature(req, '{"test": true}'),
       HttpError,
     );
