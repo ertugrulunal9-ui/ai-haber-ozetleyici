@@ -4,6 +4,9 @@
 -- concurrent requests could read the same value and overshoot the limit.
 -- consume_usage increments in a single statement and only while the counter
 -- is below the limit; refund_usage gives a consumed unit back.
+--
+-- Only device_id, date and count are touched: the deployed usage table does
+-- not have the updated_at column from the original create-table migration.
 
 -- Returns the new count, or null when the counter is already at p_limit.
 create or replace function public.consume_usage(p_key text, p_date date, p_limit integer)
@@ -15,8 +18,7 @@ as $$
   select p_key, p_date, 1
   where p_limit > 0
   on conflict (device_id, date) do update
-    set count = u.count + 1,
-        updated_at = timezone('utc'::text, now())
+    set count = u.count + 1
     where u.count < p_limit
   returning u.count;
 $$;
@@ -27,8 +29,7 @@ language sql
 set search_path = ''
 as $$
   update public.usage
-  set count = greatest(count - 1, 0),
-      updated_at = timezone('utc'::text, now())
+  set count = greatest(count - 1, 0)
   where device_id = p_key
     and date = p_date;
 $$;
