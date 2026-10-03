@@ -28,6 +28,11 @@ Repo icindeki migration dosyalari:
 
 - `usage`
 - `article_votes`
+- `summary_feedback`
+- analytics view'lari
+- `consume_usage` / `refund_usage` fonksiyonlari (atomik kota sayaclari)
+
+Edge function kota sayaclari icin `consume_usage` ve `refund_usage` fonksiyonlarini cagirir. Function'i deploy etmeden once migration'larin uygulanmis olmasi gerekir; aksi halde AI istekleri `db_error` doner.
 
 Yerelde:
 

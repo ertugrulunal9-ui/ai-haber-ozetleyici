@@ -42,7 +42,8 @@ export type HandlerContext = {
 export type HandlerResult = {
   status?: number;
   body: Record<string, unknown>;
-  incrementUsageBucket?: UsageBucket;
+  // Remaining daily summaries after this request; defaults to the pre-request value.
+  remaining?: number;
 };
 
 export type ActionHandler = (

@@ -1,5 +1,12 @@
 import { HttpError } from "./errors.ts";
-import { assertAiBurstRateLimit, assertAiRequestAllowed, assertLightweightRateLimit, assertUsageBurstRateLimit } from "./limits.ts";
+import {
+  assertAiBurstRateLimit,
+  assertAiRequestAllowed,
+  assertLightweightRateLimit,
+  assertUsageBurstRateLimit,
+  releaseUsage,
+  reserveUsage,
+} from "./limits.ts";
 import { buildPrompt } from "./prompt.ts";
 import { parseAnalyzeOutput, runOpenAi } from "./openai.ts";
 import {
@@ -8,6 +15,7 @@ import {
   HandlerContext,
   HandlerResult,
   ParsedRequest,
+  UsageBucket,
 } from "./types.ts";
 import { handleGetVotes, handleVote } from "./votes.ts";
 
@@ -32,50 +40,74 @@ async function handleSummarize(
   ctx: HandlerContext,
   input: ParsedRequest,
 ): Promise<HandlerResult> {
+  requireNonEmptyString(input.text);
   assertAiRequestAllowed(ctx.limits, "summary");
   await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "summary");
-  requireNonEmptyString(input.text);
 
-  const output = await runOpenAi(buildPrompt(input, "summarize"));
-  const { summary, keywords } = parseSummaryOutput(output);
-
-  return {
-    body: { summary, keywords },
-    incrementUsageBucket: "summary",
-  };
+  return await withReservedUsage(ctx, "summary", async () => {
+    const output = await runOpenAi(buildPrompt(input, "summarize"));
+    const { summary, keywords } = parseSummaryOutput(output);
+    return { summary, keywords };
+  });
 }
 
 async function handleAsk(
   ctx: HandlerContext,
   input: ParsedRequest,
 ): Promise<HandlerResult> {
-  assertAiRequestAllowed(ctx.limits, "assistant");
-  await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "assistant");
   requireNonEmptyString(input.text);
   requireNonEmptyString(input.question);
+  assertAiRequestAllowed(ctx.limits, "assistant");
+  await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "assistant");
 
-  const output = await runOpenAi(buildPrompt(input, "ask"));
-
-  return {
-    body: { answer: output },
-    incrementUsageBucket: "assistant",
-  };
+  return await withReservedUsage(ctx, "assistant", async () => {
+    const output = await runOpenAi(buildPrompt(input, "ask"));
+    return { answer: output };
+  });
 }
 
 async function handleAnalyze(
   ctx: HandlerContext,
   input: ParsedRequest,
 ): Promise<HandlerResult> {
+  requireNonEmptyString(input.text);
   assertAiRequestAllowed(ctx.limits, "assistant");
   await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "assistant");
-  requireNonEmptyString(input.text);
 
-  const output = await runOpenAi(buildPrompt(input, "analyze"));
+  return await withReservedUsage(ctx, "assistant", async () => {
+    const output = await runOpenAi(buildPrompt(input, "analyze"));
+    return parseAnalyzeOutput(output);
+  });
+}
 
-  return {
-    body: parseAnalyzeOutput(output),
-    incrementUsageBucket: "assistant",
+// Reserves one unit of the daily quota before running the AI call and gives
+// it back if the call fails, so users are not charged for errors.
+export async function withReservedUsage(
+  ctx: HandlerContext,
+  bucket: UsageBucket,
+  run: () => Promise<Record<string, unknown>>,
+): Promise<HandlerResult> {
+  const usageParams = {
+    db: ctx.db,
+    today: ctx.today,
+    limits: ctx.limits,
+    deviceId: ctx.userId,
+    bucket,
   };
+  const reserved = await reserveUsage(usageParams);
+
+  try {
+    const body = await run();
+    return { body, remaining: reserved.summary.deviceRemaining };
+  } catch (error) {
+    try {
+      await releaseUsage(usageParams);
+    } catch (releaseError) {
+      // Keep the original error; a failed refund only costs the user one unit.
+      console.error("usage_release_failed", releaseError);
+    }
+    throw error;
+  }
 }
 
 async function handleFeedback(

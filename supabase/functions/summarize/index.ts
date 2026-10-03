@@ -4,7 +4,7 @@ import { verifyRequestSignature } from "./auth.ts";
 import { getRequiredEnv } from "./env.ts";
 import { HttpError } from "./errors.ts";
 import { actionHandlers } from "./handlers.ts";
-import { getLimitState, incrementUsage } from "./limits.ts";
+import { getLimitState } from "./limits.ts";
 import { parseRawBody, parseRequest } from "./request.ts";
 import { corsHeaders, getClientIp, json, withRemaining } from "./response.ts";
 
@@ -44,18 +44,11 @@ Deno.serve(async (req) => {
 
     const result = await handler({ db, today, limits, userId }, input);
 
-    if (result.incrementUsageBucket) {
-      const nextLimits = await incrementUsage({
-        db,
-        today,
-        limits,
-        deviceId: userId,
-        bucket: result.incrementUsageBucket,
-      });
-      return json({ ...result.body, remaining: nextLimits.summary.deviceRemaining }, result.status ?? 200, origin);
-    }
-
-    return json(withRemaining(result.body, limits.summary.deviceRemaining), result.status ?? 200, origin);
+    return json(
+      withRemaining(result.body, result.remaining ?? limits.summary.deviceRemaining),
+      result.status ?? 200,
+      origin,
+    );
   } catch (error) {
     if (error instanceof HttpError) {
       return json(error.body, error.status, origin);
