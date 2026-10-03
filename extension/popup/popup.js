@@ -183,7 +183,16 @@ result = globalThis.AozPopupResult.createResultModule(state, {
 });
 
 history = globalThis.AozPopupHistory.createHistoryModule(state, {
-  onSelectItem: (item) => result.renderResult(item),
+  onSelectItem: (item) => {
+    // Entries restored from the compact sync backup have no summary text;
+    // open the article so it can be summarized again.
+    if (!item?.summary) {
+      const url = item?.article?.url || item?.url;
+      if (url) chrome.tabs.create({ url });
+      return;
+    }
+    result.renderResult(item);
+  },
 });
 
 // ── Event binding ─────────────────────────────────────────────────────

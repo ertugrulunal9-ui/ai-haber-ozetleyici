@@ -1,6 +1,7 @@
 import { assertEquals, assertRejects } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { HttpError } from "./errors.ts";
 import { withReservedUsage } from "./handlers.ts";
+import { handleRelatedSources } from "./semantic.ts";
 import {
   assertAiBurstRateLimit,
   assertLightweightRateLimit,
@@ -197,4 +198,37 @@ Deno.test("withReservedUsage: refunds the unit when the AI call fails", async ()
   );
   assertEquals(fake.count(USER), 0);
   assertEquals(fake.count(`ip_${IP}`), 0);
+});
+
+Deno.test("handleRelatedSources: daily per-ip cap blocks before any embedding call", async () => {
+  const fake = createFakeDb();
+  fake.set(`relatedsources:ip_${IP}`, 400);
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = () => {
+    fetchCalls++;
+    return Promise.reject(new Error("unexpected fetch"));
+  };
+
+  try {
+    await rejectsWith(
+      () =>
+        handleRelatedSources(handlerContext(fake.db), {
+          action: "relatedsources",
+          deviceId: USER,
+          lang: "tr",
+          title: "Title",
+          text: "Body",
+          question: "",
+          url: "https://example.com/news/1",
+          isClickbait: null,
+          rating: null,
+        }),
+      429,
+      { error: "rate_limited" },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assertEquals(fetchCalls, 0);
 });

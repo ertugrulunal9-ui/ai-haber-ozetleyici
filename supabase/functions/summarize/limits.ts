@@ -19,6 +19,8 @@ const LIGHTWEIGHT_IP_LIMITS: Record<LightweightAction, number> = {
   vote: 60,
   feedback: 30,
   getvotes: 120,
+  // One embedding per summary, so this matches SUMMARY_IP_DAILY_LIMIT.
+  relatedsources: 400,
 };
 
 export async function getLimitState(

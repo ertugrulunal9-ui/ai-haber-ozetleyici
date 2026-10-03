@@ -254,6 +254,9 @@ async function hydrateRelatedSources(article, storedHistoryItem, context = {}) {
   if (article.url) {
     await clientState.setCachedSummary(article.url, context.lang || "tr", updated);
   }
+  // The popup may already show this result without sources; let it update.
+  chrome.runtime.sendMessage({ action: "summarySourcesReady", articleUrl: article.url, sources })
+    .catch(() => {});
 }
 
 async function fetchSemanticRelatedSources(article, context = {}) {
@@ -270,11 +273,11 @@ async function fetchSemanticRelatedSources(article, context = {}) {
     deviceId: context.deviceId,
   });
 
-  if (result?.error || !Array.isArray(result.sources)) {
+  if (!result?.ok || !Array.isArray(result.data?.sources)) {
     return [];
   }
 
-  return result.sources;
+  return result.data.sources;
 }
 
 function mergeRelatedSources(primarySources, fallbackSources, maxItems = 6) {

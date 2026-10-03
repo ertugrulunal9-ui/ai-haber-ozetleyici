@@ -54,6 +54,21 @@
       popupUi.showPopupView(state.refs, "result");
     }
 
+    // Related sources are fetched after the summary is shown; render them
+    // when the background reports them for the article currently on screen.
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg?.action !== "summarySourcesReady" || !Array.isArray(msg.sources)) return;
+      const articleUrl = state.currentItem?.article?.url || "";
+      if (!articleUrl || msg.articleUrl !== articleUrl) return;
+
+      state.currentItem = { ...state.currentItem, sources: msg.sources };
+      surface.renderSources(state.refs, state.t, msg.sources, {
+        wrapTag: "li",
+        articleTitle: state.currentItem.title || state.currentItem.article?.title || "",
+        articleUrl,
+      });
+    });
+
     async function renderSummaryResponse(result, article) {
       if (typeof result.remaining === "number") deps.setRemaining(result.remaining);
       if (result.error === "limit") {

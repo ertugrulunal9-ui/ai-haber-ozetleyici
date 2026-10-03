@@ -57,7 +57,8 @@
   // chrome.storage.sync has strict limits: ~8 KB per key, ~100 KB total.
   // We keep only a compact { url, title, savedAt } representation in sync so
   // the user's list survives a local-storage wipe even if full summaries are lost.
-  // On recovery the items show in the list; clicking re-triggers summarization.
+  // On recovery the items show in the list; clicking one opens the article
+  // so it can be summarized again (see onSelectItem in popup.js).
 
   // Max compact entries to persist in sync (each ~150-200 B → stays well under 8 KB)
   const _SYNC_HISTORY_MAX = 20;

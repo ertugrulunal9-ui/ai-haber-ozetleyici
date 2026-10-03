@@ -1,5 +1,5 @@
 import { HttpError } from "./errors.ts";
-import { assertAiBurstRateLimit } from "./limits.ts";
+import { assertAiBurstRateLimit, assertLightweightRateLimit } from "./limits.ts";
 import { runEmbedding } from "./openai.ts";
 import { DbClient, HandlerContext, HandlerResult, ParsedRequest } from "./types.ts";
 
@@ -24,6 +24,7 @@ export async function handleRelatedSources(
   }
 
   await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "assistant");
+  await assertLightweightRateLimit(ctx.db, ctx.today, ctx.limits.clientIp, "relatedsources");
   const sources = await upsertArticleEventAndFindMatches(ctx.db, input);
   return { body: { sources } };
 }
