@@ -1,16 +1,16 @@
 import { HttpError } from "./errors.ts";
 import { DbClient, LightweightAction, LimitBucketState, LimitState, UsageBucket } from "./types.ts";
 
-const SUMMARY_DAILY_LIMIT = 10;
-const SUMMARY_IP_DAILY_LIMIT = 40;
-const ASSISTANT_DAILY_LIMIT = 10;
-const ASSISTANT_IP_DAILY_LIMIT = 40;
-const AI_BURST_WINDOW_MINUTES = 10;
+const SUMMARY_DAILY_LIMIT = 100;
+const SUMMARY_IP_DAILY_LIMIT = 400;
+const ASSISTANT_DAILY_LIMIT = 100;
+const ASSISTANT_IP_DAILY_LIMIT = 400;
+const AI_BURST_WINDOW_MINUTES = 1;
 const USAGE_BURST_WINDOW_MINUTES = 5;
 
 const AI_BURST_LIMITS: Record<UsageBucket, { device: number; ip: number }> = {
-  summary: { device: 3, ip: 12 },
-  assistant: { device: 5, ip: 20 },
+  summary: { device: 30, ip: 120 },
+  assistant: { device: 30, ip: 120 },
 };
 
 const USAGE_BURST_IP_LIMIT = 60;
@@ -19,6 +19,8 @@ const LIGHTWEIGHT_IP_LIMITS: Record<LightweightAction, number> = {
   vote: 60,
   feedback: 30,
   getvotes: 120,
+  // One embedding per summary, so this matches SUMMARY_IP_DAILY_LIMIT.
+  relatedsources: 400,
 };
 
 export async function getLimitState(
@@ -55,13 +57,13 @@ export function assertAiRequestAllowed(limits: LimitState, bucket: UsageBucket):
 export async function assertAiBurstRateLimit(
   db: DbClient,
   clientIp: string,
-  userId: string,
+  deviceId: string,
   bucket: UsageBucket,
   now = new Date(),
 ): Promise<void> {
   const windowId = getWindowId(now, AI_BURST_WINDOW_MINUTES);
   const dateKey = now.toISOString().slice(0, 10);
-  const keys = getAiBurstKeys(bucket, userId, clientIp, windowId);
+  const keys = getAiBurstKeys(bucket, deviceId, clientIp, windowId);
   const limits = AI_BURST_LIMITS[bucket];
 
   if (!(await consumeUsage(db, keys.deviceKey, dateKey, limits.device))) {
@@ -251,13 +253,13 @@ function getUsageKeys(bucket: UsageBucket, deviceId: string, clientIp: string): 
 
 function getAiBurstKeys(
   bucket: UsageBucket,
-  userId: string,
+  deviceId: string,
   clientIp: string,
   windowId: string,
 ): { deviceKey: string; ipKey: string } {
   return {
     // Prefix these counters so analytics views ignore them.
-    deviceKey: `assistant:burst:${bucket}:${userId}:${windowId}`,
+    deviceKey: `assistant:burst:${bucket}:${deviceId}:${windowId}`,
     ipKey: `ip_burst:${bucket}:${clientIp || "unknown"}:${windowId}`,
   };
 }

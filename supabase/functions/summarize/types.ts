@@ -1,7 +1,7 @@
-export type Action = "usage" | "summarize" | "ask" | "analyze" | "vote" | "getvotes" | "feedback";
+export type Action = "usage" | "summarize" | "ask" | "analyze" | "vote" | "getvotes" | "feedback" | "relatedsources";
 export type Lang = "tr" | "en";
 export type UsageBucket = "summary" | "assistant";
-export type LightweightAction = "vote" | "feedback" | "getvotes";
+export type LightweightAction = "vote" | "feedback" | "getvotes" | "relatedsources";
 
 export type ParsedRequest = {
   action: Action;
@@ -37,6 +37,7 @@ export type HandlerContext = {
   today: string;
   limits: LimitState;
   userId: string;
+  deviceId: string;
 };
 
 export type HandlerResult = {

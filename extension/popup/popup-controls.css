@@ -69,11 +69,19 @@
 }
 
 .summary-card,
-.qa-section {
+.qa-section,
+.sources-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: #f8fbff;
   padding: 11px 12px;
+}
+
+.section-helper {
+  margin: -2px 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 #summaryText {
@@ -111,6 +119,15 @@
   border-color: #c6d6ef;
 }
 
+.btn-share:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.share-spacer {
+  display: block;
+}
+
 .btn-share-x {
   background: #111827;
   border-color: #111827;
@@ -123,6 +140,23 @@
 
 .share-icon {
   font-size: 12px;
+}
+
+.sources-card {
+  background: #f0f7ff;
+  border-color: #bfdbfe;
+}
+
+.source-compare-summary {
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.45;
+  margin: 0 0 8px;
+  padding: 7px 8px;
 }
 
 #sourcesList {
@@ -148,6 +182,64 @@
 #sourcesList li a:hover {
   background: #f8fbff;
   border-color: #c7daf5;
+}
+
+#sourcesList li a .source-title {
+  display: block;
+  color: #0f172a;
+  font-weight: 650;
+}
+
+#sourcesList li a .source-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+#sourcesList li a .source-signal {
+  display: inline-block;
+  margin-top: 7px;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+#sourcesList li a .source-signal-same {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+#sourcesList li a .source-signal-close {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+#sourcesList li a .source-signal-semantic {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+#sourcesList li a .source-signal-check {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+#sourcesList li a .source-frame-note {
+  display: block;
+  margin-top: 6px;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.source-empty {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .qa-input-row {

@@ -1,10 +1,7 @@
 import { HttpError } from "./errors.ts";
 import { isAllowedOrigin } from "./response.ts";
 
-export function verifyRequestSignature(
-  req: Request,
-  _rawBody: string,
-): string {
+export function verifyRequestSignature(req: Request): string {
   const origin = req.headers.get("origin")?.trim() ?? "";
   if (!origin || !isAllowedOrigin(origin)) {
     throw new HttpError(401, { error: "unauthorized" });

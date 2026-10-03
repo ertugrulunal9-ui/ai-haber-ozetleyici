@@ -1,6 +1,7 @@
 import { assertEquals, assertRejects } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { HttpError } from "./errors.ts";
 import { withReservedUsage } from "./handlers.ts";
+import { handleRelatedSources } from "./semantic.ts";
 import {
   assertAiBurstRateLimit,
   assertLightweightRateLimit,
@@ -52,19 +53,19 @@ function createFakeDb(options: { failRpc?: boolean } = {}) {
 
 function bucketState(deviceRemaining: number): LimitBucketState {
   return {
-    deviceCount: 10 - deviceRemaining,
+    deviceCount: 100 - deviceRemaining,
     deviceRemaining,
     ipKey: "",
     ipCount: 0,
-    ipRemaining: 40,
+    ipRemaining: 400,
   };
 }
 
-function createLimits(summaryRemaining = 10): LimitState {
+function createLimits(summaryRemaining = 100): LimitState {
   return {
     clientIp: IP,
     summary: bucketState(summaryRemaining),
-    assistant: bucketState(10),
+    assistant: bucketState(100),
   };
 }
 
@@ -84,26 +85,26 @@ Deno.test("reserveUsage: consumes device and ip counters and reports remaining",
 
   assertEquals(fake.count(USER), 1);
   assertEquals(fake.count(`ip_${IP}`), 1);
-  assertEquals(next.summary.deviceRemaining, 9);
+  assertEquals(next.summary.deviceRemaining, 99);
 });
 
 Deno.test("reserveUsage: rejects at the device limit without touching the ip counter", async () => {
   const fake = createFakeDb();
-  fake.set(USER, 10);
+  fake.set(USER, 100);
 
   await rejectsWith(() => reserveUsage(usageParams(fake.db)), 429, { error: "limit", remaining: 0 });
-  assertEquals(fake.count(USER), 10);
+  assertEquals(fake.count(USER), 100);
   assertEquals(fake.count(`ip_${IP}`), 0);
 });
 
 Deno.test("reserveUsage: refunds the device counter when the ip limit is hit", async () => {
   const fake = createFakeDb();
-  fake.set(`assistant:ip_${IP}`, 40);
+  fake.set(`assistant:ip_${IP}`, 400);
 
   await rejectsWith(
     () => reserveUsage(usageParams(fake.db, "assistant")),
     429,
-    { error: "assistant_limit", remaining: 10 },
+    { error: "assistant_limit", remaining: 100 },
   );
   assertEquals(fake.count(`assistant:${USER}`), 0);
 });
@@ -111,11 +112,11 @@ Deno.test("reserveUsage: refunds the device counter when the ip limit is hit", a
 Deno.test("reserveUsage: concurrent requests never exceed the daily limit", async () => {
   const fake = createFakeDb();
   const results = await Promise.allSettled(
-    Array.from({ length: 25 }, () => reserveUsage(usageParams(fake.db))),
+    Array.from({ length: 150 }, () => reserveUsage(usageParams(fake.db))),
   );
 
-  assertEquals(results.filter((r) => r.status === "fulfilled").length, 10);
-  assertEquals(fake.count(USER), 10);
+  assertEquals(results.filter((r) => r.status === "fulfilled").length, 100);
+  assertEquals(fake.count(USER), 100);
 });
 
 Deno.test("releaseUsage: gives back the reserved unit", async () => {
@@ -136,7 +137,7 @@ Deno.test("assertAiBurstRateLimit: blocks the request after the window limit", a
   const fake = createFakeDb();
   const now = new Date("2026-10-03T12:04:00Z");
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 30; i++) {
     await assertAiBurstRateLimit(fake.db, IP, USER, "summary", now);
   }
 
@@ -150,14 +151,14 @@ Deno.test("assertAiBurstRateLimit: blocks the request after the window limit", a
 Deno.test("assertAiBurstRateLimit: refunds the device counter when the ip is limited", async () => {
   const fake = createFakeDb();
   const now = new Date("2026-10-03T12:04:00Z");
-  fake.set(`ip_burst:summary:${IP}:2026-10-03T12:00`, 12);
+  fake.set(`ip_burst:summary:${IP}:2026-10-03T12:04`, 120);
 
   await rejectsWith(
     () => assertAiBurstRateLimit(fake.db, IP, USER, "summary", now),
     429,
     { error: "rate_limited" },
   );
-  assertEquals(fake.count(`assistant:burst:summary:${USER}:2026-10-03T12:00`), 0);
+  assertEquals(fake.count(`assistant:burst:summary:${USER}:2026-10-03T12:04`), 0);
 });
 
 Deno.test("assertLightweightRateLimit: allows up to the per-ip limit", async () => {
@@ -173,7 +174,7 @@ Deno.test("assertLightweightRateLimit: allows up to the per-ip limit", async () 
 });
 
 function handlerContext(db: DbClient) {
-  return { db, today: TODAY, limits: createLimits(), userId: USER };
+  return { db, today: TODAY, limits: createLimits(), userId: USER, deviceId: USER };
 }
 
 Deno.test("withReservedUsage: keeps the unit and returns remaining on success", async () => {
@@ -181,7 +182,7 @@ Deno.test("withReservedUsage: keeps the unit and returns remaining on success", 
   const result = await withReservedUsage(handlerContext(fake.db), "summary", () =>
     Promise.resolve({ summary: "ok" }));
 
-  assertEquals(result, { body: { summary: "ok" }, remaining: 9 });
+  assertEquals(result, { body: { summary: "ok" }, remaining: 99 });
   assertEquals(fake.count(USER), 1);
 });
 
@@ -197,4 +198,37 @@ Deno.test("withReservedUsage: refunds the unit when the AI call fails", async ()
   );
   assertEquals(fake.count(USER), 0);
   assertEquals(fake.count(`ip_${IP}`), 0);
+});
+
+Deno.test("handleRelatedSources: daily per-ip cap blocks before any embedding call", async () => {
+  const fake = createFakeDb();
+  fake.set(`relatedsources:ip_${IP}`, 400);
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = () => {
+    fetchCalls++;
+    return Promise.reject(new Error("unexpected fetch"));
+  };
+
+  try {
+    await rejectsWith(
+      () =>
+        handleRelatedSources(handlerContext(fake.db), {
+          action: "relatedsources",
+          deviceId: USER,
+          lang: "tr",
+          title: "Title",
+          text: "Body",
+          question: "",
+          url: "https://example.com/news/1",
+          isClickbait: null,
+          rating: null,
+        }),
+      429,
+      { error: "rate_limited" },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assertEquals(fetchCalls, 0);
 });

@@ -1,5 +1,6 @@
 (() => {
   const clientState = globalThis.AozClientState;
+  const SUMMARY_POLL_TIMEOUT_MS = 120000;
 
   if (!clientState) {
     throw new Error("AozClientState is not loaded.");
@@ -50,57 +51,99 @@
     return response?.ok ? response.data : [];
   }
 
+  async function searchByKeyword(keyword) {
+    const response = await sendMessage({ action: "searchByKeyword", keyword });
+    return response?.ok ? response.data : [];
+  }
+
+  async function getSummaryStatus({ article, lang }) {
+    const response = await sendMessage({ action: "getSummaryStatus", payload: { article, lang } });
+    return response || { status: "idle" };
+  }
+
   async function setPublishableKey(publishableKey) {
     const response = await sendMessage({ action: "setPublishableKey", publishableKey });
     return response?.ok ? { ok: true } : { ok: false };
   }
 
-  async function summarizeArticle({ article, lang, deviceId, skipCache }) {
-    if (!skipCache && article.url) {
-      const cached = await clientState.getCachedSummary(article.url, lang);
-      if (cached) {
-        await clientState.setLastResult(cached);
-        return { remaining: null, historyItem: cached, fromCache: true };
-      }
-    }
+  async function authWithEmail(mode, email, password) {
+    const action = mode === "signup" ? "signUp" : "signIn";
+    const response = await sendMessage({ action, email, password });
+    if (!response) return { ok: false };
+    return response;
+  }
 
-    const result = await requestApi({
-      action: "summarize",
-      text: article.text,
-      title: article.title,
-      url: article.url,
-      lang,
-      deviceId,
+  async function signInWithGoogle() {
+    const response = await sendMessage({ action: "signInGoogle" });
+    if (!response) return { ok: false };
+    return response;
+  }
+
+  async function signOut() {
+    const response = await sendMessage({ action: "signOut" });
+    return response?.ok ?? false;
+  }
+
+  async function getUser() {
+    const response = await sendMessage({ action: "getUser" });
+    return response || { email: "" };
+  }
+
+  async function summarizeArticle({ article, lang, deviceId, skipCache }) {
+    const response = await sendMessage({
+      action: "summarizeArticle",
+      payload: { article, lang, deviceId, skipCache },
     });
 
-    if (result.error) return result;
-
-    const sources = result.sources?.length ? result.sources : await fetchRelatedSources(article.title);
-    const historyItem = {
-      title: article.title,
-      summary: result.summary,
-      keywords: result.keywords || [],
-      sources,
-      article,
-    };
-    const storedHistoryItem = toStoredHistoryItem(historyItem);
-
-    await clientState.setLastResult(storedHistoryItem);
-    await clientState.saveToHistory(storedHistoryItem);
-    if (article.url) {
-      await clientState.setCachedSummary(article.url, lang, storedHistoryItem);
+    if (!response) {
+      return { error: "network", remaining: null };
     }
 
-    // Stats hooks
-    await clientState.recordDailyAction("summary");
-    await clientState.updateStreak();
-    try {
-      const hostname = new URL(article.url).hostname.replace(/^www\./, "");
-      await clientState.recordSourceRead(hostname);
-      await clientState.incrementSourceReads(hostname);
-    } catch { /* invalid URL — skip */ }
+    if (response.status === "pending") {
+      return waitForSummary(article, lang);
+    }
 
-    return { ...result, historyItem };
+    if (response.status === "error") {
+      return { error: response.error || "generic", remaining: response.remaining ?? null };
+    }
+
+    return response;
+  }
+
+  function waitForSummary(article, lang) {
+    return new Promise((resolve) => {
+      let done = false;
+
+      function finish(value) {
+        if (done) return;
+        done = true;
+        clearTimeout(timeoutId);
+        clearInterval(pollId);
+        chrome.runtime.onMessage.removeListener(onPush);
+        resolve(value);
+      }
+
+      function onPush(msg) {
+        if (msg.action !== "summaryReady") return;
+        if (article?.url && msg.articleUrl && msg.articleUrl !== article.url) return;
+        finish(msg.result);
+      }
+      chrome.runtime.onMessage.addListener(onPush);
+
+      const pollId = setInterval(async () => {
+        const status = await getSummaryStatus({ article, lang });
+        if (status.status === "done" && status.historyItem) {
+          finish(status);
+        } else if (status.status === "error") {
+          finish({ error: status.error || "generic", remaining: status.remaining ?? null });
+        }
+      }, 3000);
+
+      const timeoutId = setTimeout(
+        () => finish({ error: "network", remaining: null }),
+        SUMMARY_POLL_TIMEOUT_MS,
+      );
+    });
   }
 
   async function askQuestion({ article, lang, deviceId, question }) {
@@ -166,7 +209,7 @@
   async function submitVote({ url, deviceId, is_clickbait }) {
     const result = await requestApi({ action: "vote", url, deviceId, is_clickbait });
     if (!result.error) {
-      await clientState.recordDailyAction("vote");
+      await clientState.recordClickbaitVote(Boolean(is_clickbait));
     }
     return result;
   }
@@ -205,35 +248,22 @@
     }
   }
 
-  function toStoredHistoryItem(item) {
-    return {
-      ...item,
-      article: toStoredArticle(item.article),
-    };
-  }
-
-  function toStoredArticle(article) {
-    if (!article) {
-      return null;
-    }
-
-    return {
-      title: article.title || "",
-      url: article.url || "",
-    };
-  }
-
   globalThis.AozAppCore = {
+    searchByKeyword,
     getDeviceId: clientState.getDeviceId,
     getLang: clientState.getLang,
     setLang: clientState.setLang,
     getHistory: clientState.getHistory,
+    saveArticle: clientState.saveArticle,
+    getSavedArticles: clientState.getSavedArticles,
+    isArticleSaved: clientState.isArticleSaved,
     getLastResult: clientState.getLastResult,
     setLastResult: clientState.setLastResult,
     clearLastResult: clientState.clearLastResult,
     getUsage,
     getArticle,
     fetchRelatedSources,
+    getSummaryStatus,
     setPublishableKey,
     summarizeArticle,
     askQuestion,
@@ -241,5 +271,9 @@
     getVotes,
     submitVote,
     submitFeedback,
+    authWithEmail,
+    signInWithGoogle,
+    signOut,
+    getUser,
   };
 })();

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Builds a distributable copy of the extension.
-# Usage: SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx ./scripts/build-extension.sh
+# Usage:
+#   SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx \
+#   ./scripts/build-extension.sh
 # The output goes to dist/extension/
 
 set -euo pipefail
@@ -15,13 +17,19 @@ if [[ -z "${SUPABASE_PUBLISHABLE_KEY:-}" ]]; then
   exit 1
 fi
 
+escape_sed_replacement() {
+  printf '%s' "$1" | sed -e 's/[&|\\]/\\&/g'
+}
+
+SUPABASE_PUBLISHABLE_KEY_ESCAPED="$(escape_sed_replacement "$SUPABASE_PUBLISHABLE_KEY")"
+
 # Clean and copy
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 cp -r "$SRC_DIR"/* "$DIST_DIR"/
 cp "$ROOT_DIR/manifest.json" "$DIST_DIR"/ 2>/dev/null || true
 
-sed -i.bak "s|__SUPABASE_PUBLISHABLE_KEY__|$SUPABASE_PUBLISHABLE_KEY|g" "$DIST_DIR/background/background.js"
+sed -i.bak "s|__SUPABASE_PUBLISHABLE_KEY__|$SUPABASE_PUBLISHABLE_KEY_ESCAPED|g" "$DIST_DIR/background/background.js"
 rm -f "$DIST_DIR/background/background.js.bak"
 
 echo "Extension built successfully in $DIST_DIR"

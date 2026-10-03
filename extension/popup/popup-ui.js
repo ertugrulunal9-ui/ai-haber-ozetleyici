@@ -10,19 +10,22 @@
       mainView: document.getElementById("mainView"),
       loadingView: document.getElementById("loadingView"),
       resultView: document.getElementById("resultView"),
-      limitView: document.getElementById("limitView"),
       statsView: document.getElementById("statsView"),
-      usageText: document.getElementById("usageText"),
       summarizeButton: document.getElementById("summarizeBtn"),
       historySection: document.getElementById("historySection"),
       historyLabel: document.getElementById("historyLabel"),
       historyList: document.getElementById("historyList"),
+      savedSection: document.getElementById("savedSection"),
+      savedLabel: document.getElementById("savedLabel"),
+      savedList: document.getElementById("savedList"),
       loadingText: document.getElementById("loadingText"),
       summaryLabel: document.getElementById("summaryLabel"),
+      summaryHelper: document.getElementById("summaryHelper"),
       summaryText: document.getElementById("summaryText"),
       biasButton: document.getElementById("biasBtn"),
       biasSection: document.getElementById("biasSection"),
       biasSectionLabel: document.getElementById("biasSectionLabel"),
+      biasHelper: document.getElementById("biasHelper"),
       biasLeftLabel: document.getElementById("biasLeftLabel"),
       biasRightLabel: document.getElementById("biasRightLabel"),
       biasObjectiveLabel: document.getElementById("biasObjectiveLabel"),
@@ -33,27 +36,29 @@
       emotionalDot: document.getElementById("biasEmotionalDot"),
       biasNote: document.getElementById("biasNote"),
       clickbaitLabel: document.getElementById("clickbaitLabel"),
+      clickbaitHelper: document.getElementById("clickbaitHelper"),
       voteYesButton: document.getElementById("voteYesBtn"),
       voteNoButton: document.getElementById("voteNoBtn"),
       voteStats: document.getElementById("clickbaitStats"),
       copyButton: document.getElementById("copyBtn"),
       copyLabel: document.getElementById("copyLabel"),
+      saveButton: document.getElementById("saveBtn"),
       twitterButton: document.getElementById("twitterBtn"),
-      sourcesSection: document.getElementById("sourcesLabel"),
+      sourcesSection: document.getElementById("sourcesSection"),
       sourcesLabel: document.getElementById("sourcesLabel"),
+      sourcesHelper: document.getElementById("sourcesHelper"),
+      sourcesCompareSummary: document.getElementById("sourcesCompareSummary"),
       sourcesList: document.getElementById("sourcesList"),
       qaLabel: document.getElementById("qaLabel"),
       qaInput: document.getElementById("qaInput"),
       qaButton: document.getElementById("qaBtn"),
       qaAnswer: document.getElementById("qaAnswer"),
       backButton: document.getElementById("backBtn"),
-      limitText: document.getElementById("limitText"),
-      premiumButton: document.getElementById("premiumBtn"),
       langButton: document.getElementById("langBtn"),
       keywordsContainer: document.getElementById("keywordsContainer"),
       feedbackGoodButton: document.getElementById("feedbackGoodBtn"),
       feedbackBadButton: document.getElementById("feedbackBadBtn"),
-      // Phase 1 — Streak & Stats
+      // Streak & Stats
       streakWidget: document.getElementById("streakWidget"),
       streakIcon: document.getElementById("streakIcon"),
       streakText: document.getElementById("streakText"),
@@ -68,12 +73,16 @@
       statsStreakBar: document.getElementById("statsStreakBar"),
       statsStreakBest: document.getElementById("statsStreakBest"),
       statsWeeklyLabel: document.getElementById("statsWeeklyLabel"),
+      mediaDietSummary: document.getElementById("mediaDietSummary"),
+      mediaDietShareButton: document.getElementById("mediaDietShareBtn"),
       statsArticles: document.getElementById("statsArticles"),
       statsAnalyses: document.getElementById("statsAnalyses"),
       statsQuestions: document.getElementById("statsQuestions"),
       statsVotes: document.getElementById("statsVotes"),
       statsBiasTitle: document.getElementById("statsBiasTitle"),
       statsBiasContent: document.getElementById("statsBiasContent"),
+      statsTopicsTitle: document.getElementById("statsTopicsTitle"),
+      statsTopicsList: document.getElementById("statsTopicsList"),
       statsSourcesTitle: document.getElementById("statsSourcesTitle"),
       statsSourcesList: document.getElementById("statsSourcesList"),
       statsSourceProfilesTitle: document.getElementById("statsSourceProfilesTitle"),
@@ -82,6 +91,7 @@
       // Stats view card containers
       statsWeeklyCard: document.getElementById("statsWeeklyCard"),
       statsBiasCard: document.getElementById("statsBiasCard"),
+      statsTopicsCard: document.getElementById("statsTopicsCard"),
       statsSourcesCard: document.getElementById("statsSourcesCard"),
       statsSourceProfilesCard: document.getElementById("statsSourceProfilesCard"),
       // Daily report
@@ -90,6 +100,30 @@
       dailyReportLine1: document.getElementById("dailyReportLine1"),
       dailyReportLine2: document.getElementById("dailyReportLine2"),
       dailyReportDetailsBtn: document.getElementById("dailyReportDetailsBtn"),
+      weeklyReportCard: document.getElementById("weeklyReportCard"),
+      weeklyReportTitle: document.getElementById("weeklyReportTitle"),
+      weeklyReportLine1: document.getElementById("weeklyReportLine1"),
+      weeklyReportLine2: document.getElementById("weeklyReportLine2"),
+      weeklyReportDetailsBtn: document.getElementById("weeklyReportDetailsBtn"),
+      // Auth & usage
+      userEmail: document.getElementById("userEmail"),
+      signOutButton: document.getElementById("signOutBtn"),
+      usageText: document.getElementById("usageText"),
+      authView: document.getElementById("authView"),
+      authSubtitle: document.getElementById("authSubtitle"),
+      authEmail: document.getElementById("authEmail"),
+      authPassword: document.getElementById("authPassword"),
+      authSubmitBtn: document.getElementById("authSubmitBtn"),
+      authToggleBtn: document.getElementById("authToggleBtn"),
+      authMessage: document.getElementById("authMessage"),
+      googleSignInBtn: document.getElementById("googleSignInBtn"),
+      googleSignInLabel: document.getElementById("googleSignInLabel"),
+      authDividerText: document.getElementById("authDividerText"),
+      // Limit view
+      limitView: document.getElementById("limitView"),
+      limitText: document.getElementById("limitText"),
+      premiumButton: document.getElementById("premiumBtn"),
+      limitBackButton: document.getElementById("limitBackBtn"),
     };
   }
 
@@ -98,8 +132,9 @@
       main: refs.mainView,
       loading: refs.loadingView,
       result: refs.resultView,
-      limit: refs.limitView,
       stats: refs.statsView,
+      auth: refs.authView,
+      limit: refs.limitView,
     };
 
     Object.entries(viewMap).forEach(([name, node]) => {
@@ -111,27 +146,37 @@
     refs.langButton.textContent = lang === "tr" ? "EN" : "TR";
     refs.summarizeButton.textContent = t.summarize;
     refs.backButton.textContent = t.back;
-    refs.premiumButton.textContent = t.go_premium;
     refs.summaryLabel.textContent = t.summary_label;
+    if (refs.summaryHelper) refs.summaryHelper.textContent = t.summary_helper;
     refs.qaLabel.textContent = t.qa_section_label;
     refs.qaInput.placeholder = t.qa_placeholder;
     refs.copyLabel.textContent = t.copy_action;
     refs.twitterButton.textContent = t.twitter_action;
     refs.biasButton.textContent = t.bias_btn;
     refs.biasSectionLabel.textContent = t.bias_title;
+    if (refs.biasHelper) refs.biasHelper.textContent = t.bias_helper;
     refs.biasLeftLabel.textContent = t.bias_left;
     refs.biasRightLabel.textContent = t.bias_right;
     refs.biasObjectiveLabel.textContent = t.bias_objective;
     refs.biasEmotionalLabel.textContent = t.bias_emotional;
     refs.historyLabel.textContent = t.history_label;
-    refs.limitText.textContent = globalThis.AozUi.getLimitResetText(t);
-    surface.setUsageText(refs.usageText, t, currentRemaining);
-    // Phase 1 translations
+    if (refs.savedLabel) refs.savedLabel.textContent = t.saved_label;
+    if (refs.saveButton) refs.saveButton.textContent = t.save_action;
+    if (refs.clickbaitHelper) refs.clickbaitHelper.textContent = t.clickbait_helper;
+    if (refs.sourcesHelper) refs.sourcesHelper.textContent = t.sources_helper;
+    // Stats translations
     if (refs.statsButton) refs.statsButton.textContent = `\u{1F4CA} ${t.stats_title}`;
     if (refs.statsViewTitle) refs.statsViewTitle.textContent = t.stats_title;
     if (refs.statsBackButton) refs.statsBackButton.textContent = t.back;
     if (refs.dailyReportTitle) refs.dailyReportTitle.textContent = t.daily_report_title;
-    if (refs.dailyReportDetailsBtn) refs.dailyReportDetailsBtn.textContent = `${t.daily_report_details} \u2192`;
+    if (refs.dailyReportDetailsBtn) refs.dailyReportDetailsBtn.textContent = `${t.daily_report_details} →`;
+    if (refs.weeklyReportTitle) refs.weeklyReportTitle.textContent = t.weekly_report_title;
+    if (refs.weeklyReportDetailsBtn) refs.weeklyReportDetailsBtn.textContent = `${t.weekly_report_details} →`;
+    if (refs.mediaDietShareButton) refs.mediaDietShareButton.textContent = t.media_diet_share_action;
+    if (refs.usageText) surface.setUsageText(refs.usageText, t, currentRemaining);
+    if (refs.premiumButton) refs.premiumButton.textContent = t.go_premium;
+    if (refs.limitText) refs.limitText.textContent = globalThis.AozUi.getLimitResetText(t);
+    if (refs.limitBackButton) refs.limitBackButton.textContent = t.back;
   }
 
   globalThis.AozPopupUi = {

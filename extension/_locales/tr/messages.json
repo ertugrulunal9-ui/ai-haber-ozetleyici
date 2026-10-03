@@ -1,10 +1,10 @@
 {
   "appName": { "message": "AI Haber Özetleyici" },
-  "appDescription": { "message": "Haberleri yapay zeka ile özetle, taraflılık analizi yap, clickbait oyu ver ve farklı kaynaklardan karşılaştır." },
+  "appDescription": { "message": "Haberin özünü, ton sinyallerini ve farklı kaynaklardaki yansımasını yapay zeka ile tek tıkla gör." },
   "summarize": { "message": "Özetle" },
   "summarizing": { "message": "Özetleniyor..." },
-  "summary_title": { "message": "Özet" },
-  "sources_title": { "message": "Diğer Kaynaklar" },
+  "summary_title": { "message": "Haberin Özü" },
+  "sources_title": { "message": "Başka Kaynaklar" },
   "back": { "message": "Geri" },
   "go_premium": { "message": "Beni Bilgilendir" },
   "daily_limit": { "message": "Günlük 10 özet hakkın doldu. Yarın tekrar kullanabilirsin!" },

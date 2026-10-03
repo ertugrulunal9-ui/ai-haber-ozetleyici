@@ -53,11 +53,11 @@ Deno.test("buildPrompt: ask mode EN", () => {
   assertStringIncludes(prompt.userContent, "<question>What happened?</question>");
 });
 
-Deno.test("buildPrompt: analyze mode returns JSON instruction", () => {
+Deno.test("buildPrompt: analyze mode names structured fields", () => {
   const prompt = buildPrompt(makeInput(), "analyze");
   assertStringIncludes(prompt.systemPrompt, "political");
   assertStringIncludes(prompt.systemPrompt, "emotional");
-  assertStringIncludes(prompt.systemPrompt, "JSON");
+  assertStringIncludes(prompt.systemPrompt, "note");
 });
 
 Deno.test("buildPrompt: analyze mode EN", () => {

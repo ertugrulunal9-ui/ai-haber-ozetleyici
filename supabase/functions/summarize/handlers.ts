@@ -8,22 +8,26 @@ import {
   reserveUsage,
 } from "./limits.ts";
 import { buildPrompt } from "./prompt.ts";
-import { parseAnalyzeOutput, runOpenAi } from "./openai.ts";
+import { runAnalyzeOpenAi, runAnswerOpenAi, runSummaryOpenAi } from "./openai.ts";
 import {
   Action,
   ActionHandler,
+  DbClient,
   HandlerContext,
   HandlerResult,
+  Lang,
   ParsedRequest,
   UsageBucket,
 } from "./types.ts";
 import { handleGetVotes, handleVote } from "./votes.ts";
+import { handleRelatedSources } from "./semantic.ts";
 
 export const actionHandlers: Record<Action, ActionHandler> = {
   usage: handleUsage,
   getvotes: handleGetVotes,
   vote: handleVote,
   feedback: handleFeedback,
+  relatedsources: handleRelatedSources,
   summarize: handleSummarize,
   ask: handleAsk,
   analyze: handleAnalyze,
@@ -44,9 +48,20 @@ async function handleSummarize(
   assertAiRequestAllowed(ctx.limits, "summary");
   await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "summary");
 
+  if (input.url) {
+    const cached = await getArticleCache(ctx.db, input.url, input.lang);
+    if (cached) {
+      return { body: { summary: cached.summary, keywords: cached.keywords, cached: true } };
+    }
+  }
+
   return await withReservedUsage(ctx, "summary", async () => {
-    const output = await runOpenAi(buildPrompt(input, "summarize"));
-    const { summary, keywords } = parseSummaryOutput(output);
+    const { summary, keywords } = await runSummaryOpenAi(buildPrompt(input, "summarize"));
+
+    if (input.url) {
+      storeArticleCache(ctx.db, input.url, input.lang, summary, keywords).catch(() => {});
+    }
+
     return { summary, keywords };
   });
 }
@@ -61,8 +76,8 @@ async function handleAsk(
   await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "assistant");
 
   return await withReservedUsage(ctx, "assistant", async () => {
-    const output = await runOpenAi(buildPrompt(input, "ask"));
-    return { answer: output };
+    const { answer } = await runAnswerOpenAi(buildPrompt(input, "ask"));
+    return { answer };
   });
 }
 
@@ -74,10 +89,7 @@ async function handleAnalyze(
   assertAiRequestAllowed(ctx.limits, "assistant");
   await assertAiBurstRateLimit(ctx.db, ctx.limits.clientIp, ctx.userId, "assistant");
 
-  return await withReservedUsage(ctx, "assistant", async () => {
-    const output = await runOpenAi(buildPrompt(input, "analyze"));
-    return parseAnalyzeOutput(output);
-  });
+  return await withReservedUsage(ctx, "assistant", () => runAnalyzeOpenAi(buildPrompt(input, "analyze")));
 }
 
 // Reserves one unit of the daily quota before running the AI call and gives
@@ -132,19 +144,48 @@ async function handleFeedback(
   return { body: { ok: true } };
 }
 
-function parseSummaryOutput(output: string): { summary: string; keywords: string[] } {
-  const keywordMatch = output.match(/KEYWORDS:\s*(.+)/i);
-  if (!keywordMatch) {
-    return { summary: output.trim(), keywords: [] };
-  }
+// ── Server-side summary cache ──────────────────────────────────────────
 
-  const summary = output.slice(0, keywordMatch.index).trim();
-  const keywords = keywordMatch[1]
-    .split(",")
-    .map((k) => k.trim())
-    .filter((k) => k.length > 0);
+export async function getArticleCache(
+  db: DbClient,
+  url: string,
+  lang: Lang,
+): Promise<{ summary: string; keywords: string[] } | null> {
+  const urlHash = await hashUrl(url);
+  const { data } = await db
+    .from("article_summaries")
+    .select("summary, keywords")
+    .eq("url_hash", urlHash)
+    .eq("lang", lang)
+    .maybeSingle();
 
-  return { summary, keywords };
+  if (!data) return null;
+  return {
+    summary: String(data.summary),
+    keywords: Array.isArray(data.keywords) ? (data.keywords as unknown[]).map(String) : [],
+  };
+}
+
+export async function storeArticleCache(
+  db: DbClient,
+  url: string,
+  lang: Lang,
+  summary: string,
+  keywords: string[],
+): Promise<void> {
+  const urlHash = await hashUrl(url);
+  await db.from("article_summaries").upsert(
+    { url_hash: urlHash, lang, summary, keywords },
+    { onConflict: "url_hash,lang", ignoreDuplicates: true },
+  );
+}
+
+async function hashUrl(url: string): Promise<string> {
+  const data = new TextEncoder().encode(url.trim());
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function requireNonEmptyString(value: string): void {

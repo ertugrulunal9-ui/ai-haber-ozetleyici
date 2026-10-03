@@ -1,5 +1,9 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { parseAnalyzeOutput } from "./openai.ts";
+import {
+  normalizeAnalyzeOutput,
+  normalizeAnswerOutput,
+  normalizeSummaryOutput,
+} from "./openai.ts";
 import { HttpError } from "./errors.ts";
 
 function assertHttpError(fn: () => void, status: number) {
@@ -12,56 +16,89 @@ function assertHttpError(fn: () => void, status: number) {
   }
 }
 
-Deno.test("parseAnalyzeOutput: valid JSON", () => {
-  const result = parseAnalyzeOutput(
-    '{"political": 25, "emotional": 40, "note": "Slight right-leaning tone."}',
+Deno.test("normalizeSummaryOutput: valid structured object", () => {
+  const result = normalizeSummaryOutput({
+    summary: "News summary.",
+    keywords: ["economy", "rates", "policy"],
+  });
+  assertEquals(result.summary, "News summary.");
+  assertEquals(result.keywords, ["economy", "rates", "policy"]);
+});
+
+Deno.test("normalizeSummaryOutput: trims keywords and removes invalid entries", () => {
+  const result = normalizeSummaryOutput({
+    summary: "News summary.",
+    keywords: [" economy ", "", 42, "policy"],
+  });
+  assertEquals(result.keywords, ["economy", "policy"]);
+});
+
+Deno.test("normalizeSummaryOutput: empty summary throws 502", () => {
+  assertHttpError(
+    () => normalizeSummaryOutput({ summary: " ", keywords: [] }),
+    502,
   );
+});
+
+Deno.test("normalizeAnswerOutput: valid structured object", () => {
+  const result = normalizeAnswerOutput({ answer: "Based on the article, this is likely." });
+  assertEquals(result.answer, "Based on the article, this is likely.");
+});
+
+Deno.test("normalizeAnswerOutput: empty answer throws 502", () => {
+  assertHttpError(() => normalizeAnswerOutput({ answer: "" }), 502);
+});
+
+Deno.test("normalizeAnalyzeOutput: valid structured object", () => {
+  const result = normalizeAnalyzeOutput({
+    political: 25,
+    emotional: 40,
+    note: "Slight right-leaning tone.",
+  });
   assertEquals(result.political, 25);
   assertEquals(result.emotional, 40);
   assertEquals(result.note, "Slight right-leaning tone.");
 });
 
-Deno.test("parseAnalyzeOutput: JSON wrapped in markdown fences", () => {
-  const input = '```json\n{"political": -50, "emotional": 80, "note": "Strong left bias."}\n```';
-  const result = parseAnalyzeOutput(input);
-  assertEquals(result.political, -50);
-  assertEquals(result.emotional, 80);
-  assertEquals(result.note, "Strong left bias.");
-});
-
-Deno.test("parseAnalyzeOutput: trims note whitespace", () => {
-  const result = parseAnalyzeOutput(
-    '{"political": 0, "emotional": 0, "note": "  Neutral coverage.  "}',
-  );
+Deno.test("normalizeAnalyzeOutput: trims note whitespace", () => {
+  const result = normalizeAnalyzeOutput({
+    political: 0,
+    emotional: 0,
+    note: "  Neutral coverage.  ",
+  });
   assertEquals(result.note, "Neutral coverage.");
 });
 
-Deno.test("parseAnalyzeOutput: missing note throws 502", () => {
+Deno.test("normalizeAnalyzeOutput: missing note throws 502", () => {
   assertHttpError(
-    () => parseAnalyzeOutput('{"political": 0, "emotional": 0}'),
+    () => normalizeAnalyzeOutput({ political: 0, emotional: 0 }),
     502,
   );
 });
 
-Deno.test("parseAnalyzeOutput: note is number throws 502", () => {
+Deno.test("normalizeAnalyzeOutput: note is number throws 502", () => {
   assertHttpError(
-    () => parseAnalyzeOutput('{"political": 0, "emotional": 0, "note": 42}'),
+    () => normalizeAnalyzeOutput({ political: 0, emotional: 0, note: 42 }),
     502,
   );
 });
 
-Deno.test("parseAnalyzeOutput: non-JSON string throws 502", () => {
-  assertHttpError(() => parseAnalyzeOutput("This is not JSON at all"), 502);
-});
-
-Deno.test("parseAnalyzeOutput: empty string throws 502", () => {
-  assertHttpError(() => parseAnalyzeOutput(""), 502);
-});
-
-Deno.test("parseAnalyzeOutput: numeric strings coerced to numbers", () => {
-  const result = parseAnalyzeOutput(
-    '{"political": "30", "emotional": "70", "note": "Test."}',
-  );
+Deno.test("normalizeAnalyzeOutput: numeric strings coerced to numbers", () => {
+  const result = normalizeAnalyzeOutput({
+    political: "30",
+    emotional: "70",
+    note: "Test.",
+  });
   assertEquals(result.political, 30);
   assertEquals(result.emotional, 70);
+});
+
+Deno.test("normalizeAnalyzeOutput: values are clamped", () => {
+  const result = normalizeAnalyzeOutput({
+    political: 500,
+    emotional: -20,
+    note: "Extreme values.",
+  });
+  assertEquals(result.political, 100);
+  assertEquals(result.emotional, 0);
 });

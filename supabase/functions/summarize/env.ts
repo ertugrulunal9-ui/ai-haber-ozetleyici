@@ -6,3 +6,7 @@ export function getRequiredEnv(name: string): string {
 
   return value;
 }
+
+export function getOptionalEnv(name: string): string | undefined {
+  return Deno.env.get(name)?.trim() || undefined;
+}
