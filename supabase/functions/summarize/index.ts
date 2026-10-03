@@ -4,7 +4,13 @@ import { verifyRequestSignature } from "./auth.ts";
 import { getRequiredEnv } from "./env.ts";
 import { HttpError } from "./errors.ts";
 import { getArticleCache, storeArticleCache, actionHandlers } from "./handlers.ts";
-import { getLimitState, incrementUsage, assertAiRequestAllowed, assertAiBurstRateLimit } from "./limits.ts";
+import {
+  assertAiBurstRateLimit,
+  assertAiRequestAllowed,
+  getLimitState,
+  releaseUsage,
+  reserveUsage,
+} from "./limits.ts";
 import { assertContentLengthWithinLimit, parseRawBody, parseRequest } from "./request.ts";
 import { corsHeaders, getClientIp, json, withRemaining } from "./response.ts";
 import { buildPrompt } from "./prompt.ts";
@@ -50,9 +56,9 @@ Deno.serve(async (req) => {
     const isStream = rawRecord.stream === true && input.action === "summarize";
 
     if (isStream) {
+      if (!input.text) throw new HttpError(400, { error: "bad_request" });
       assertAiRequestAllowed(limits, "summary");
       await assertAiBurstRateLimit(db, limits.clientIp, userId, "summary");
-      if (!input.text) throw new HttpError(400, { error: "bad_request" });
 
       // Serve from cache without consuming quota
       if (input.url) {
@@ -66,24 +72,27 @@ Deno.serve(async (req) => {
         }
       }
 
-      const nextLimits = await incrementUsage({
-        db,
-        today,
-        limits,
-        deviceId: userId,
-        bucket: "summary",
-      });
-      const remaining = nextLimits.summary.deviceRemaining;
+      // Reserve the quota before the AI call; give it back if the call fails.
+      const usageParams = { db, today, limits, deviceId: userId, bucket: "summary" as const };
+      const reserved = await reserveUsage(usageParams);
 
-      const stream = await runOpenAiStream(
-        buildPrompt(input, "summarize"),
-        (summary, keywords) => {
-          if (input.url) {
-            storeArticleCache(db, input.url, input.lang, summary, keywords).catch(() => {});
-          }
-        },
-        remaining,
-      );
+      let stream: ReadableStream<Uint8Array>;
+      try {
+        stream = await runOpenAiStream(
+          buildPrompt(input, "summarize"),
+          (summary, keywords) => {
+            if (input.url) {
+              storeArticleCache(db, input.url, input.lang, summary, keywords).catch(() => {});
+            }
+          },
+          reserved.summary.deviceRemaining,
+        );
+      } catch (error) {
+        await releaseUsage(usageParams).catch((releaseError) =>
+          console.error("usage_release_failed", releaseError)
+        );
+        throw error;
+      }
 
       return new Response(stream, {
         headers: {
@@ -98,22 +107,11 @@ Deno.serve(async (req) => {
     const handler = actionHandlers[input.action];
     const result = await handler({ db, today, limits, userId, deviceId }, input);
 
-    if (result.incrementUsageBucket) {
-      const nextLimits = await incrementUsage({
-        db,
-        today,
-        limits,
-        deviceId: userId,
-        bucket: result.incrementUsageBucket,
-      });
-      return json(
-        { ...result.body, remaining: nextLimits.summary.deviceRemaining },
-        result.status ?? 200,
-        origin,
-      );
-    }
-
-    return json(withRemaining(result.body, limits.summary.deviceRemaining), result.status ?? 200, origin);
+    return json(
+      withRemaining(result.body, result.remaining ?? limits.summary.deviceRemaining),
+      result.status ?? 200,
+      origin,
+    );
   } catch (error) {
     if (error instanceof HttpError) {
       return json(error.body, error.status, origin);

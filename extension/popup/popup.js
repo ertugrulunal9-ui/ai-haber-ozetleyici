@@ -7,7 +7,7 @@ const state = {
   refs: popupUi.collectPopupRefs(),
   deviceId: "",
   lang: "tr",
-  t: getTranslations("tr", "popup"),
+  t: getTranslations("tr"),
   currentItem: null,
   currentRemaining: undefined,
   authPromptShown: false,
@@ -108,7 +108,7 @@ async function maybeConfigurePublishableKey() {
 async function init() {
   state.deviceId = state.deviceId || await appCore.getDeviceId();
   state.lang = await appCore.getLang();
-  state.t = getTranslations(state.lang, "popup");
+  state.t = getTranslations(state.lang);
   applyTranslations();
 
   await maybeConfigurePublishableKey();
@@ -145,7 +145,7 @@ async function init() {
 
   const article = await appCore.getArticle();
   if (article && (!article.url || !tabUrl || isSameUrl(article.url, tabUrl))) {
-    const summaryStatus = await appCore.getSummaryStatus({ article });
+    const summaryStatus = await appCore.getSummaryStatus({ article, lang: state.lang });
     if (summaryStatus.status === "pending") {
       void result.resumePendingSummary(article);
       return;

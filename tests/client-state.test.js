@@ -244,23 +244,35 @@ describe("getLastResult / setLastResult / clearLastResult", () => {
 
 describe("getCachedSummary / setCachedSummary", () => {
   it("stores and retrieves a summary with a cachedAt timestamp", async () => {
-    await cs().setCachedSummary("https://a.com", { summary: "s" });
-    const cached = await cs().getCachedSummary("https://a.com");
+    await cs().setCachedSummary("https://a.com", "tr", { summary: "s" });
+    const cached = await cs().getCachedSummary("https://a.com", "tr");
     expect(cached.summary).toBe("s");
     expect(cached.cachedAt).toBeTypeOf("number");
   });
 
   it("returns null for an uncached URL", async () => {
-    expect(await cs().getCachedSummary("https://missing.com")).toBeNull();
+    expect(await cs().getCachedSummary("https://missing.com", "tr")).toBeNull();
+  });
+
+  it("does not return a summary cached in another language", async () => {
+    await cs().setCachedSummary("https://a.com", "tr", { summary: "Türkçe özet" });
+    expect(await cs().getCachedSummary("https://a.com", "en")).toBeNull();
+  });
+
+  it("keeps separate entries per language", async () => {
+    await cs().setCachedSummary("https://a.com", "tr", { summary: "Türkçe özet" });
+    await cs().setCachedSummary("https://a.com", "en", { summary: "English summary" });
+    expect((await cs().getCachedSummary("https://a.com", "tr")).summary).toBe("Türkçe özet");
+    expect((await cs().getCachedSummary("https://a.com", "en")).summary).toBe("English summary");
   });
 
   it("evicts the oldest entry when the cache reaches 50 items", async () => {
     for (let i = 0; i < 50; i++) {
-      await cs().setCachedSummary(`https://a.com/${i}`, { i });
+      await cs().setCachedSummary(`https://a.com/${i}`, "tr", { i });
     }
-    await cs().setCachedSummary("https://a.com/new", { i: 99 });
-    expect(await cs().getCachedSummary("https://a.com/0")).toBeNull();
-    expect(await cs().getCachedSummary("https://a.com/new")).not.toBeNull();
+    await cs().setCachedSummary("https://a.com/new", "tr", { i: 99 });
+    expect(await cs().getCachedSummary("https://a.com/0", "tr")).toBeNull();
+    expect(await cs().getCachedSummary("https://a.com/new", "tr")).not.toBeNull();
   });
 });
 

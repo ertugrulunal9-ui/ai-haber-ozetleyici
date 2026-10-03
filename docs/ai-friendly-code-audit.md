@@ -1,5 +1,9 @@
 # AI-Friendly Code Standard and Audit
 
+> Note (2026-10): the in-page sidebar (`extension/content/`) was removed; it had not been
+> loaded since `content_scripts` was dropped from the manifest. Sidebar items in the
+> sections below are kept as history only.
+
 ## Why this exists
 
 This repo does not need a blind "200 lines max" rule. The useful unit for AI-assisted work is change locality:

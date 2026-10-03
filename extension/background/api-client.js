@@ -49,9 +49,10 @@ async function startSummarizeArticle(payload = {}) {
     return { status: "pending" };
   }
 
+  const lang = payload.lang || "tr";
   const clientState = getClientState();
   if (!payload.skipCache && article.url) {
-    const cached = await clientState.getCachedSummary(article.url);
+    const cached = await clientState.getCachedSummary(article.url, lang);
     if (isUsableHistoryItem(cached)) {
       await clientState.setLastResult(cached);
       return { status: "done", remaining: null, historyItem: cached, fromCache: true };
@@ -60,7 +61,7 @@ async function startSummarizeArticle(payload = {}) {
 
   const job = runSummarizeJob({
     article,
-    lang: payload.lang || "tr",
+    lang,
     deviceId: payload.deviceId || "",
     key,
   });
@@ -93,7 +94,7 @@ async function getSummaryStatus(payload = {}) {
   const key = getArticleKey(article);
 
   if (article?.url) {
-    const cached = await getClientState().getCachedSummary(article.url);
+    const cached = await getClientState().getCachedSummary(article.url, payload.lang || "tr");
     if (isUsableHistoryItem(cached)) {
       return { status: "done", historyItem: cached, fromCache: true };
     }
@@ -227,7 +228,7 @@ async function saveJobResult(article, summary, keywords, remaining, context = {}
   const clientState = getClientState();
   await clientState.setLastResult(storedHistoryItem);
   await clientState.saveToHistory(storedHistoryItem);
-  if (article.url) await clientState.setCachedSummary(article.url, storedHistoryItem);
+  if (article.url) await clientState.setCachedSummary(article.url, context.lang || "tr", storedHistoryItem);
   await recordSummaryStats(article, keywords);
   hydrateRelatedSources(article, storedHistoryItem, context).catch(() => {});
 
@@ -251,7 +252,7 @@ async function hydrateRelatedSources(article, storedHistoryItem, context = {}) {
   const clientState = getClientState();
   await clientState.setLastResult(updated);
   if (article.url) {
-    await clientState.setCachedSummary(article.url, updated);
+    await clientState.setCachedSummary(article.url, context.lang || "tr", updated);
   }
 }
 

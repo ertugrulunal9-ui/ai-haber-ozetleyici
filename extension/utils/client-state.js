@@ -158,19 +158,24 @@
     await _storageRemove("lastResult");
   }
 
-  async function getCachedSummary(url) {
-    const { summaryCache = {} } = await _storageGet("summaryCache");
-    return summaryCache[url] || null;
+  // Summaries are language-specific, so the cache is keyed by lang + url.
+  function summaryCacheKey(url, lang) {
+    return `${lang}|${url}`;
   }
 
-  async function setCachedSummary(url, item) {
+  async function getCachedSummary(url, lang) {
+    const { summaryCache = {} } = await _storageGet("summaryCache");
+    return summaryCache[summaryCacheKey(url, lang)] || null;
+  }
+
+  async function setCachedSummary(url, lang, item) {
     return _withMutex("summaryCache", async () => {
       const { summaryCache = {} } = await _storageGet("summaryCache");
       const keys = Object.keys(summaryCache);
       if (keys.length >= 50) {
         delete summaryCache[keys[0]];
       }
-      summaryCache[url] = { ...item, cachedAt: Date.now() };
+      summaryCache[summaryCacheKey(url, lang)] = { ...item, cachedAt: Date.now() };
       await _storageSet({ summaryCache });
     });
   }

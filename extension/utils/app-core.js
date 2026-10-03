@@ -56,8 +56,8 @@
     return response?.ok ? response.data : [];
   }
 
-  async function getSummaryStatus({ article }) {
-    const response = await sendMessage({ action: "getSummaryStatus", payload: { article } });
+  async function getSummaryStatus({ article, lang }) {
+    const response = await sendMessage({ action: "getSummaryStatus", payload: { article, lang } });
     return response || { status: "idle" };
   }
 
@@ -100,7 +100,7 @@
     }
 
     if (response.status === "pending") {
-      return waitForSummary(article);
+      return waitForSummary(article, lang);
     }
 
     if (response.status === "error") {
@@ -110,7 +110,7 @@
     return response;
   }
 
-  function waitForSummary(article) {
+  function waitForSummary(article, lang) {
     return new Promise((resolve) => {
       let done = false;
 
@@ -131,7 +131,7 @@
       chrome.runtime.onMessage.addListener(onPush);
 
       const pollId = setInterval(async () => {
-        const status = await getSummaryStatus({ article });
+        const status = await getSummaryStatus({ article, lang });
         if (status.status === "done" && status.historyItem) {
           finish(status);
         } else if (status.status === "error") {

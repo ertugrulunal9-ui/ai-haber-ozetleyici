@@ -62,20 +62,16 @@ export async function assertAiBurstRateLimit(
   const windowId = getWindowId(now, AI_BURST_WINDOW_MINUTES);
   const dateKey = now.toISOString().slice(0, 10);
   const keys = getAiBurstKeys(bucket, deviceId, clientIp, windowId);
-  const [deviceCount, ipCount] = await Promise.all([
-    getUsageCount(db, keys.deviceKey, dateKey),
-    getUsageCount(db, keys.ipKey, dateKey),
-  ]);
   const limits = AI_BURST_LIMITS[bucket];
 
-  if (deviceCount >= limits.device || ipCount >= limits.ip) {
+  if (!(await consumeUsage(db, keys.deviceKey, dateKey, limits.device))) {
     throw new HttpError(429, { error: "rate_limited" });
   }
 
-  await Promise.all([
-    setUsageCount(db, keys.deviceKey, dateKey, deviceCount + 1),
-    setUsageCount(db, keys.ipKey, dateKey, ipCount + 1),
-  ]);
+  if (!(await consumeUsage(db, keys.ipKey, dateKey, limits.ip))) {
+    await refundUsage(db, keys.deviceKey, dateKey);
+    throw new HttpError(429, { error: "rate_limited" });
+  }
 }
 
 export async function assertUsageBurstRateLimit(
@@ -86,13 +82,10 @@ export async function assertUsageBurstRateLimit(
   const windowId = getWindowId(now, USAGE_BURST_WINDOW_MINUTES);
   const dateKey = now.toISOString().slice(0, 10);
   const key = `ip_usage_burst:${clientIp || "unknown"}:${windowId}`;
-  const count = await getUsageCount(db, key, dateKey);
 
-  if (count >= USAGE_BURST_IP_LIMIT) {
+  if (!(await consumeUsage(db, key, dateKey, USAGE_BURST_IP_LIMIT))) {
     throw new HttpError(429, { error: "rate_limited" });
   }
-
-  await setUsageCount(db, key, dateKey, count + 1);
 }
 
 export async function assertLightweightRateLimit(
@@ -101,34 +94,41 @@ export async function assertLightweightRateLimit(
   clientIp: string,
   action: LightweightAction,
 ): Promise<void> {
-  const maxCount = LIGHTWEIGHT_IP_LIMITS[action];
   const key = `${action}:ip_${clientIp || "unknown"}`;
-  const count = await getUsageCount(db, key, today);
 
-  if (count >= maxCount) {
+  if (!(await consumeUsage(db, key, today, LIGHTWEIGHT_IP_LIMITS[action]))) {
     throw new HttpError(429, { error: "rate_limited" });
   }
-
-  await setUsageCount(db, key, today, count + 1);
 }
 
-export async function incrementUsage(params: {
+type UsageParams = {
   db: DbClient;
   today: string;
   limits: LimitState;
   deviceId: string;
   bucket: UsageBucket;
-}): Promise<LimitState> {
+};
+
+// Atomically reserves one unit of the daily quota before the AI call, so
+// concurrent requests cannot overshoot the limit. Pair with releaseUsage
+// when the AI call fails.
+export async function reserveUsage(params: UsageParams): Promise<LimitState> {
   const { db, today, limits, deviceId, bucket } = params;
-  const current = limits[bucket];
   const bucketLimits = getBucketLimits(bucket);
   const keys = getUsageKeys(bucket, deviceId, limits.clientIp);
+  const errorCode = bucket === "summary" ? "limit" : "assistant_limit";
 
-  const deviceCount = current.deviceCount + 1;
-  await setUsageCount(db, keys.deviceKey, today, deviceCount);
+  const deviceCount = await consumeUsage(db, keys.deviceKey, today, bucketLimits.device);
+  if (deviceCount === null) {
+    const remaining = bucket === "summary" ? 0 : limits.summary.deviceRemaining;
+    throw new HttpError(429, { error: errorCode, remaining });
+  }
 
-  const ipCount = current.ipCount + 1;
-  await setUsageCount(db, keys.ipKey, today, ipCount);
+  const ipCount = await consumeUsage(db, keys.ipKey, today, bucketLimits.ip);
+  if (ipCount === null) {
+    await refundUsage(db, keys.deviceKey, today);
+    throw new HttpError(429, { error: errorCode, remaining: limits.summary.deviceRemaining });
+  }
 
   const nextBucketState: LimitBucketState = {
     deviceCount,
@@ -142,6 +142,14 @@ export async function incrementUsage(params: {
     ...limits,
     [bucket]: nextBucketState,
   } as LimitState;
+}
+
+export async function releaseUsage(params: UsageParams): Promise<void> {
+  const { db, today, limits, deviceId, bucket } = params;
+  const keys = getUsageKeys(bucket, deviceId, limits.clientIp);
+
+  await refundUsage(db, keys.deviceKey, today);
+  await refundUsage(db, keys.ipKey, today);
 }
 
 async function getUsageCount(
@@ -163,18 +171,35 @@ async function getUsageCount(
   return Number(data?.count ?? 0);
 }
 
-async function setUsageCount(
+// Increments the counter in a single statement (see the consume_usage SQL
+// function). Returns the new count, or null when the limit is already reached.
+async function consumeUsage(
   db: DbClient,
-  deviceId: string,
-  today: string,
-  count: number,
-): Promise<void> {
-  const result = await db.from("usage").upsert(
-    { device_id: deviceId, date: today, count },
-    { onConflict: "device_id,date" },
-  );
+  key: string,
+  date: string,
+  limit: number,
+): Promise<number | null> {
+  const { data, error } = await db.rpc("consume_usage", {
+    p_key: key,
+    p_date: date,
+    p_limit: limit,
+  });
 
-  if (result.error) {
+  if (error) {
+    throw new HttpError(500, { error: "db_error" });
+  }
+
+  return data === null || data === undefined ? null : Number(data);
+}
+
+async function refundUsage(
+  db: DbClient,
+  key: string,
+  date: string,
+): Promise<void> {
+  const { error } = await db.rpc("refund_usage", { p_key: key, p_date: date });
+
+  if (error) {
     throw new HttpError(500, { error: "db_error" });
   }
 }

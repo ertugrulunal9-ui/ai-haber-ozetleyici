@@ -288,41 +288,9 @@
     },
   };
 
-  const VARIANT_OVERRIDES = {
-    sidebar: {
-      tr: {
-        history_label: "SON ÖZETLER",
-        saved_label: "KAYDEDİLENLER",
-        summary_label: "HABERİN ÖZÜ",
-        qa_section_label: "HABER HAKKINDA SOR",
-        sources_title: "BAŞKA KAYNAKLAR",
-        copy_action: "📋 Kopyala",
-        copied_action: "✓ Kopyalandı",
-        save_action: "Kaydet",
-        saved_action: "✓ Kaydedildi",
-        error_short: "Hata oluştu, tekrar dene.",
-      },
-      en: {
-        history_label: "RECENT SUMMARIES",
-        saved_label: "SAVED ARTICLES",
-        summary_label: "ARTICLE GIST",
-        qa_section_label: "ASK ABOUT THIS",
-        sources_title: "OTHER SOURCES",
-        copy_action: "📋 Copy",
-        copied_action: "✓ Copied",
-        save_action: "Save",
-        saved_action: "✓ Saved",
-        error_short: "Something went wrong.",
-      },
-    },
-  };
-
-  function getTranslations(lang, variant = "popup") {
+  function getTranslations(lang) {
     const resolvedLang = BASE_TRANSLATIONS[lang] ? lang : "tr";
-    return {
-      ...BASE_TRANSLATIONS[resolvedLang],
-      ...(VARIANT_OVERRIDES[variant]?.[resolvedLang] || {}),
-    };
+    return { ...BASE_TRANSLATIONS[resolvedLang] };
   }
 
   function getBiasDisplay({ political, emotional }, t) {

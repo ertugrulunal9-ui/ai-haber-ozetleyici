@@ -38,15 +38,15 @@ function getEmbeddingModel(): string {
 }
 
 export async function runSummaryOpenAi(prompt: OpenAiPrompt): Promise<SummaryOutput> {
-  return runStructuredOpenAi(prompt, SUMMARY_RESPONSE_FORMAT, normalizeSummaryOutput);
+  return await runStructuredOpenAi(prompt, SUMMARY_RESPONSE_FORMAT, normalizeSummaryOutput);
 }
 
 export async function runAnswerOpenAi(prompt: OpenAiPrompt): Promise<AnswerOutput> {
-  return runStructuredOpenAi(prompt, ANSWER_RESPONSE_FORMAT, normalizeAnswerOutput);
+  return await runStructuredOpenAi(prompt, ANSWER_RESPONSE_FORMAT, normalizeAnswerOutput);
 }
 
 export async function runAnalyzeOpenAi(prompt: OpenAiPrompt): Promise<AnalyzeOutput> {
-  return runStructuredOpenAi(prompt, ANALYZE_RESPONSE_FORMAT, normalizeAnalyzeOutput);
+  return await runStructuredOpenAi(prompt, ANALYZE_RESPONSE_FORMAT, normalizeAnalyzeOutput);
 }
 
 export async function runEmbedding(input: string): Promise<number[]> {
