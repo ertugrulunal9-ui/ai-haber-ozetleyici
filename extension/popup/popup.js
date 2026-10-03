@@ -7,7 +7,7 @@ const state = {
   refs: popupUi.collectPopupRefs(),
   deviceId: "",
   lang: "tr",
-  t: getTranslations("tr", "popup"),
+  t: getTranslations("tr"),
   currentItem: null,
   currentRemaining: undefined,
   authPromptShown: false,
@@ -100,7 +100,7 @@ async function getCurrentTabUrl() {
 async function init() {
   state.deviceId = state.deviceId || await appCore.getDeviceId();
   state.lang = await appCore.getLang();
-  state.t = getTranslations(state.lang, "popup");
+  state.t = getTranslations(state.lang);
   applyTranslations();
 
   const usage = await refreshUsage();

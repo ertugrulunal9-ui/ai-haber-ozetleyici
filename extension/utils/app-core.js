@@ -57,7 +57,7 @@
 
   async function summarizeArticle({ article, lang, deviceId, skipCache }) {
     if (!skipCache && article.url) {
-      const cached = await clientState.getCachedSummary(article.url);
+      const cached = await clientState.getCachedSummary(article.url, lang);
       if (cached) {
         await clientState.setLastResult(cached);
         return { remaining: null, historyItem: cached, fromCache: true };
@@ -88,7 +88,7 @@
     await clientState.setLastResult(storedHistoryItem);
     await clientState.saveToHistory(storedHistoryItem);
     if (article.url) {
-      await clientState.setCachedSummary(article.url, storedHistoryItem);
+      await clientState.setCachedSummary(article.url, lang, storedHistoryItem);
     }
 
     // Stats hooks

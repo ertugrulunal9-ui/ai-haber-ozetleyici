@@ -1,5 +1,9 @@
 # Refactor Smoke Checklist
 
+> Note (2026-10): the in-page sidebar (`extension/content/`) was removed; it had not been
+> loaded since `content_scripts` was dropped from the manifest. Sidebar items in the
+> refactor phases below are kept as history only.
+
 ## Purpose
 
 This checklist exists because the repo currently has no visible automated test suite.
@@ -15,7 +19,7 @@ Before touching behavior-heavy files:
 2. note the visible output
 3. refactor one surface at a time
 4. rerun only the affected checklist first
-5. stop immediately if popup, sidebar, and edge-function outputs diverge
+5. stop immediately if popup and edge-function outputs diverge
 
 ## Environment pre-check
 
@@ -65,32 +69,6 @@ Checklist:
 16. Toggle language
 17. Confirm labels change and app remains usable
 
-## Sidebar smoke tests
-
-Target files:
-
-- `extension/content/content.js`
-- `extension/content/sidebar-ui.js`
-- `extension/content/sidebar.css`
-
-Checklist:
-
-1. Open a news article page and wait for sidebar/tab injection
-2. Open sidebar from the tab button
-3. Confirm summarize button and usage text are visible
-4. Run summarize
-5. Confirm loading view then result view
-6. Confirm history entries are clickable
-7. Click a history item and confirm previous result loads
-8. Run bias analysis
-9. Ask a question and confirm answer appears
-10. Copy summary and confirm temporary label change
-11. Open share action and confirm a new tab opens
-12. Vote yes/no and confirm UI updates
-13. Click back and confirm view returns to main or limit correctly
-14. Toggle language and confirm current state survives
-15. Close sidebar and reopen from the tab
-
 ## Edge function smoke tests
 
 Target file:
@@ -126,7 +104,6 @@ Manual verification goals:
 Verification:
 
 - popup smoke tests if popup files changed
-- sidebar smoke tests if content files changed
 
 ### Phase 1: popup-only structural refactor
 
@@ -184,7 +161,6 @@ Verification:
 
 Stop the refactor and fix immediately if any of these happen:
 
-- popup and sidebar show different labels for the same state
 - remaining quota stops updating
 - history stops persisting
 - analyze returns malformed output

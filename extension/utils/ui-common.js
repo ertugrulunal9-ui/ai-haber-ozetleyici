@@ -164,35 +164,9 @@
     },
   };
 
-  const VARIANT_OVERRIDES = {
-    sidebar: {
-      tr: {
-        history_label: "SON ÖZETLER",
-        summary_label: "ÖZET",
-        qa_section_label: "SORU SOR",
-        sources_title: "DİĞER KAYNAKLAR",
-        copy_action: "📋 Kopyala",
-        copied_action: "✓ Kopyalandı",
-        error_short: "Hata oluştu, tekrar dene.",
-      },
-      en: {
-        history_label: "RECENT SUMMARIES",
-        summary_label: "SUMMARY",
-        qa_section_label: "ASK",
-        sources_title: "OTHER SOURCES",
-        copy_action: "📋 Copy",
-        copied_action: "✓ Copied",
-        error_short: "Something went wrong.",
-      },
-    },
-  };
-
-  function getTranslations(lang, variant = "popup") {
+  function getTranslations(lang) {
     const resolvedLang = BASE_TRANSLATIONS[lang] ? lang : "tr";
-    return {
-      ...BASE_TRANSLATIONS[resolvedLang],
-      ...(VARIANT_OVERRIDES[variant]?.[resolvedLang] || {}),
-    };
+    return { ...BASE_TRANSLATIONS[resolvedLang] };
   }
 
   function getBiasDisplay({ political, emotional }, t) {
