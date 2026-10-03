@@ -1,9 +1,9 @@
 {
   "appName": { "message": "AI News Summarizer" },
-  "appDescription": { "message": "Summarize news with AI, analyze political & emotional bias, vote on clickbait, and compare across sources." },
+  "appDescription": { "message": "See the gist, tone signals, and cross-source framing of news with AI in one click." },
   "summarize": { "message": "Summarize" },
   "summarizing": { "message": "Summarizing..." },
-  "summary_title": { "message": "Summary" },
+  "summary_title": { "message": "Article Gist" },
   "sources_title": { "message": "Other Sources" },
   "back": { "message": "Back" },
   "go_premium": { "message": "Notify Me" },

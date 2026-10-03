@@ -2,13 +2,29 @@ import { HttpError } from "./errors.ts";
 import { Action, ParsedRequest } from "./types.ts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MAX_BODY_LENGTH = 12_000;
+export const MAX_BODY_LENGTH = 12_000;
 
 export async function parseJsonBody(req: Request): Promise<unknown> {
   try {
     return await req.json();
   } catch {
     throw new HttpError(400, { error: "bad_request" });
+  }
+}
+
+export function assertContentLengthWithinLimit(req: Request): void {
+  const rawLength = req.headers.get("content-length")?.trim() ?? "";
+  if (!rawLength) {
+    return;
+  }
+
+  const contentLength = Number(rawLength);
+  if (!Number.isFinite(contentLength) || contentLength < 0) {
+    throw new HttpError(400, { error: "bad_request" });
+  }
+
+  if (contentLength > MAX_BODY_LENGTH) {
+    throw new HttpError(413, { error: "payload_too_large" });
   }
 }
 
@@ -58,7 +74,8 @@ function parseAction(value: unknown): Action {
     action === "analyze" ||
     action === "vote" ||
     action === "getvotes" ||
-    action === "feedback"
+    action === "feedback" ||
+    action === "relatedsources"
   ) {
     return action;
   }

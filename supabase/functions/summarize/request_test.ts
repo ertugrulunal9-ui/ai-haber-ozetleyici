@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { parseRequest, parseRawBody } from "./request.ts";
+import { assertContentLengthWithinLimit, parseRequest, parseRawBody } from "./request.ts";
 import { HttpError } from "./errors.ts";
 
 const VALID_UUID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
@@ -45,7 +45,7 @@ Deno.test("parseRequest: valid full body", () => {
 });
 
 Deno.test("parseRequest: all valid actions", () => {
-  for (const action of ["usage", "summarize", "ask", "analyze", "vote", "getvotes"]) {
+  for (const action of ["usage", "summarize", "ask", "analyze", "vote", "getvotes", "feedback", "relatedsources"]) {
     const result = parseRequest({ action, deviceId: VALID_UUID });
     assertEquals(result.action, action);
   }
@@ -110,4 +110,23 @@ Deno.test("parseRawBody: invalid JSON throws 400", () => {
 Deno.test("parseRawBody: too large body throws 413", () => {
   const largeBody = "A".repeat(13_000);
   assertHttpError(() => parseRawBody(largeBody), 413);
+});
+
+Deno.test("assertContentLengthWithinLimit: allows missing header", () => {
+  const req = new Request("https://example.com");
+  assertContentLengthWithinLimit(req);
+});
+
+Deno.test("assertContentLengthWithinLimit: rejects oversized header", () => {
+  const req = new Request("https://example.com", {
+    headers: { "content-length": "13000" },
+  });
+  assertHttpError(() => assertContentLengthWithinLimit(req), 413);
+});
+
+Deno.test("assertContentLengthWithinLimit: rejects invalid header", () => {
+  const req = new Request("https://example.com", {
+    headers: { "content-length": "not-a-number" },
+  });
+  assertHttpError(() => assertContentLengthWithinLimit(req), 400);
 });

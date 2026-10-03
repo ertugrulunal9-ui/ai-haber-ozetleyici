@@ -18,12 +18,15 @@
             <span class="brand-mark" aria-hidden="true">AI</span>
             <span class="logo">AI &Ouml;zet</span>
           </div>
-          <button id="langBtn" class="lang-btn" aria-label="Dil degistir">EN</button>
+          <div class="header-controls">
+            <button id="langBtn" type="button" class="lang-btn" aria-label="Dil degistir">EN</button>
+            <span id="userEmail" class="user-email hidden"></span>
+            <button id="signOutBtn" type="button" class="sign-out-btn hidden"></button>
+          </div>
         </header>
 
         <!-- Ana ekran -->
         <div id="mainView" class="view">
-          <p id="usageText" class="usage-text"></p>
           <!-- Daily Report Card -->
           <div id="dailyReportCard" class="daily-report-card hidden">
             <p class="daily-report-title" id="dailyReportTitle"></p>
@@ -31,14 +34,26 @@
             <p class="daily-report-line" id="dailyReportLine2"></p>
             <button id="dailyReportDetailsBtn" type="button" class="daily-report-link" aria-label="Detaylı istatistikler"></button>
           </div>
+          <!-- Weekly Report Card -->
+          <div id="weeklyReportCard" class="weekly-report-card hidden">
+            <p class="weekly-report-title" id="weeklyReportTitle"></p>
+            <p class="weekly-report-line" id="weeklyReportLine1"></p>
+            <p class="weekly-report-line" id="weeklyReportLine2"></p>
+            <button id="weeklyReportDetailsBtn" type="button" class="weekly-report-link" aria-label="Haftalik istatistikler"></button>
+          </div>
           <!-- Streak Widget -->
           <div id="streakWidget" class="streak-widget hidden">
             <span class="streak-fire" id="streakIcon"></span>
             <span class="streak-text" id="streakText"></span>
             <span class="streak-best" id="streakBest"></span>
           </div>
+          <p id="usageText" class="usage-text"></p>
           <button id="summarizeBtn" class="btn btn-primary">&Ouml;zetle</button>
           <button id="statsBtn" type="button" class="btn-stats">&#128202; İstatistiklerim</button>
+          <div id="savedSection" class="history-panel hidden">
+            <h3 id="savedLabel" class="history-label">Kaydedilenler</h3>
+            <ul id="savedList"></ul>
+          </div>
           <div id="historySection" class="history-panel hidden">
             <h3 id="historyLabel" class="history-label">Son &Ouml;zetler</h3>
             <ul id="historyList"></ul>
@@ -64,6 +79,8 @@
           <!-- Weekly Numbers -->
           <div class="stats-card" id="statsWeeklyCard">
             <p class="section-label" id="statsWeeklyLabel"></p>
+            <div id="mediaDietSummary" class="media-diet-summary"></div>
+            <button id="mediaDietShareBtn" type="button" class="media-diet-share-btn"></button>
             <p class="stats-line" id="statsArticles"></p>
             <p class="stats-line" id="statsAnalyses"></p>
             <p class="stats-line" id="statsQuestions"></p>
@@ -74,6 +91,12 @@
           <div class="stats-card" id="statsBiasCard">
             <p class="section-label" id="statsBiasTitle"></p>
             <div id="statsBiasContent"></div>
+          </div>
+
+          <!-- Top Sources -->
+          <div class="stats-card" id="statsTopicsCard">
+            <p class="section-label" id="statsTopicsTitle"></p>
+            <div id="statsTopicsList"></div>
           </div>
 
           <!-- Top Sources -->
@@ -104,6 +127,7 @@
         <div id="resultView" class="view hidden">
           <section class="summary-card">
             <h3 id="summaryLabel">&Ouml;zet</h3>
+            <p id="summaryHelper" class="section-helper"></p>
             <p id="summaryText"></p>
           </section>
 
@@ -113,6 +137,7 @@
 
           <div id="biasSection" class="bias-card hidden">
             <p class="section-label" id="biasSectionLabel">TARAFLILIK ANALİZİ</p>
+            <p id="biasHelper" class="section-helper"></p>
             <div class="bias-meter">
               <div class="bias-meter-labels">
                 <span id="biasLeftLabel">Sol</span>
@@ -138,6 +163,7 @@
 
           <div id="clickbaitSection" class="clickbait-card">
             <p class="section-label" id="clickbaitLabel">CLICKBAIT MI?</p>
+            <p id="clickbaitHelper" class="section-helper"></p>
             <div class="clickbait-vote-row">
               <button id="voteYesBtn" type="button" class="btn-vote" aria-label="Clickbait">👎 Clickbait</button>
               <button id="voteNoBtn" type="button" class="btn-vote" aria-label="Clickbait değil">👍 Değil</button>
@@ -150,7 +176,12 @@
               <span class="share-icon" aria-hidden="true">[]</span>
               <span id="copyLabel">Kopyala</span>
             </button>
+            <button id="saveBtn" type="button" class="btn-share">Kaydet</button>
+          </div>
+
+          <div class="share-row">
             <button id="twitterBtn" class="btn-share btn-share-x">X Payla&#351;</button>
+            <span class="share-spacer" aria-hidden="true"></span>
           </div>
 
           <div class="share-row feedback-row">
@@ -158,8 +189,12 @@
             <button id="feedbackBadBtn" type="button" class="btn-share">👎</button>
           </div>
 
-          <h3 id="sourcesLabel" class="hidden">Di&#287;er Kaynaklar</h3>
-          <ul id="sourcesList"></ul>
+          <section id="sourcesSection" class="sources-card hidden">
+            <h3 id="sourcesLabel">Di&#287;er Kaynaklar</h3>
+            <p id="sourcesHelper" class="section-helper"></p>
+            <p id="sourcesCompareSummary" class="source-compare-summary hidden"></p>
+            <ul id="sourcesList"></ul>
+          </section>
 
           <div class="qa-section">
             <h3 id="qaLabel">Soru Sor</h3>
@@ -173,10 +208,25 @@
           <button id="backBtn" class="btn btn-secondary">Geri</button>
         </div>
 
-        <!-- Limit doldu -->
+        <!-- Giriş / Kayıt -->
+        <div id="authView" class="view hidden">
+          <p id="authSubtitle" class="auth-subtitle"></p>
+          <button id="googleSignInBtn" type="button" class="btn btn-google">
+            <span id="googleSignInLabel">Google ile Giriş Yap</span>
+          </button>
+          <p id="authDividerText" class="auth-divider">veya</p>
+          <input id="authEmail" type="email" placeholder="E-posta" class="auth-input" />
+          <input id="authPassword" type="password" placeholder="Şifre" class="auth-input" />
+          <button id="authSubmitBtn" type="button" class="btn btn-primary">Giriş Yap</button>
+          <button id="authToggleBtn" type="button" class="btn-link auth-toggle">Hesabın yok mu? Kayıt ol</button>
+          <p id="authMessage" class="auth-message hidden"></p>
+        </div>
+
+        <!-- Limit aşıldı -->
         <div id="limitView" class="view hidden">
-          <p id="limitText"></p>
-          <button id="premiumBtn" class="btn btn-premium hidden">Premium'a Ge&ccedil;</button>
+          <p id="limitText" class="limit-text"></p>
+          <button id="premiumBtn" type="button" class="btn btn-primary"></button>
+          <button id="limitBackBtn" type="button" class="btn btn-secondary">Geri</button>
         </div>
       </div>
     </div>
@@ -186,6 +236,10 @@
     <script src="../utils/stats-engine.js"></script>
     <script src="../utils/app-core.js"></script>
     <script src="popup-ui.js"></script>
+    <script src="popup-stats.js"></script>
+    <script src="popup-history.js"></script>
+    <script src="popup-result.js"></script>
+    <script src="popup-auth.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

@@ -19,8 +19,6 @@ function withOrigin(value: string, fn: () => void | Promise<void>): () => Promis
   };
 }
 
-// --- withRemaining ---
-
 Deno.test("withRemaining: adds remaining to body", () => {
   const result = withRemaining({ summary: "test" }, 5);
   assertEquals(result, { summary: "test", remaining: 5 });
@@ -30,8 +28,6 @@ Deno.test("withRemaining: remaining zero", () => {
   const result = withRemaining({}, 0);
   assertEquals(result, { remaining: 0 });
 });
-
-// --- getClientIp ---
 
 Deno.test("getClientIp: from x-forwarded-for", () => {
   const req = new Request("http://localhost", {
@@ -66,19 +62,26 @@ Deno.test("getClientIp: trims whitespace", () => {
   assertEquals(getClientIp(req), "1.2.3.4");
 });
 
-// --- isAllowedOrigin ---
+Deno.test(
+  "isAllowedOrigin: matches configured extension origin",
+  withOrigin(EXT_ORIGIN, () => {
+    assertEquals(isAllowedOrigin(EXT_ORIGIN), true);
+  }),
+);
 
-Deno.test("isAllowedOrigin: matches configured extension origin", () => {
-  assertEquals(isAllowedOrigin(EXT_ORIGIN), true);
-});
+Deno.test(
+  "isAllowedOrigin: rejects non-listed origin",
+  withOrigin(EXT_ORIGIN, () => {
+    assertEquals(isAllowedOrigin("https://evil.com"), false);
+  }),
+);
 
-Deno.test("isAllowedOrigin: rejects non-listed origin", () => {
-  assertEquals(isAllowedOrigin("https://evil.com"), false);
-});
-
-Deno.test("isAllowedOrigin: rejects arbitrary chrome-extension origin", () => {
-  assertEquals(isAllowedOrigin("chrome-extension://aaaaaaaaaaaaaaaa"), false);
-});
+Deno.test(
+  "isAllowedOrigin: rejects arbitrary chrome-extension origin",
+  withOrigin(EXT_ORIGIN, () => {
+    assertEquals(isAllowedOrigin("chrome-extension://aaaaaaaaaaaaaaaa"), false);
+  }),
+);
 
 Deno.test(
   "isAllowedOrigin: accepts any origin in wildcard mode",
@@ -94,23 +97,30 @@ Deno.test(
   }),
 );
 
-// --- corsHeaders ---
+Deno.test(
+  "corsHeaders: returns matching origin when allowlisted",
+  withOrigin(EXT_ORIGIN, () => {
+    const headers = corsHeaders(EXT_ORIGIN);
+    assertEquals(headers["Access-Control-Allow-Origin"], EXT_ORIGIN);
+    assertEquals(headers.Vary, "Origin");
+  }),
+);
 
-Deno.test("corsHeaders: returns matching origin when allowlisted", () => {
-  const headers = corsHeaders(EXT_ORIGIN);
-  assertEquals(headers["Access-Control-Allow-Origin"], EXT_ORIGIN);
-  assertEquals(headers["Vary"], "Origin");
-});
+Deno.test(
+  "corsHeaders: returns empty for unknown origin",
+  withOrigin(EXT_ORIGIN, () => {
+    const headers = corsHeaders("https://evil.com");
+    assertEquals(headers["Access-Control-Allow-Origin"], "");
+  }),
+);
 
-Deno.test("corsHeaders: returns empty for unknown origin", () => {
-  const headers = corsHeaders("https://evil.com");
-  assertEquals(headers["Access-Control-Allow-Origin"], "");
-});
-
-Deno.test("corsHeaders: returns empty when no origin provided", () => {
-  const headers = corsHeaders();
-  assertEquals(headers["Access-Control-Allow-Origin"], "");
-});
+Deno.test(
+  "corsHeaders: returns empty when no origin provided",
+  withOrigin(EXT_ORIGIN, () => {
+    const headers = corsHeaders();
+    assertEquals(headers["Access-Control-Allow-Origin"], "");
+  }),
+);
 
 Deno.test(
   "corsHeaders: returns * in wildcard mode",
@@ -128,9 +138,12 @@ Deno.test(
   }),
 );
 
-Deno.test("corsHeaders: allows authorization and content-type headers", () => {
-  const headers = corsHeaders();
-  const allowed = headers["Access-Control-Allow-Headers"];
-  assertEquals(allowed.includes("authorization"), true);
-  assertEquals(allowed.includes("content-type"), true);
-});
+Deno.test(
+  "corsHeaders: allows authorization and content-type headers",
+  withOrigin(EXT_ORIGIN, () => {
+    const headers = corsHeaders();
+    const allowed = headers["Access-Control-Allow-Headers"];
+    assertEquals(allowed.includes("authorization"), true);
+    assertEquals(allowed.includes("content-type"), true);
+  }),
+);

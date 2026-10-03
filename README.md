@@ -11,7 +11,7 @@ Akis su sekilde calisir:
 
 1. Popup istegi background service worker'a yollar.
 2. Background service worker aktif sekmede extractor scriptini gecici olarak calistirir.
-3. Background service worker Supabase edge function'a ve Google News RSS'e istek atar.
+3. Background service worker Supabase edge function'a, semantik kaynak eslestirme katmanina ve Google News RSS'e istek atar.
 4. Edge function ozet, soru-cevap, taraflilik analizi, oy ve kullanim kotasi yanitlarini dondurur.
 
 ## Kurulum
@@ -54,7 +54,6 @@ Notlar:
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY` ve `SUPABASE_SERVICE_ROLE_KEY` Supabase tarafinda varsayilan olarak saglanir.
 - `ALLOWED_ORIGIN` icine izin verilen extension origin degerlerini ekle. Ornek: `chrome-extension://<extension-id>`
 - Extension build adiminda ayni projenin publishable key'ini `SUPABASE_PUBLISHABLE_KEY` olarak ver.
-- `APP_SECRET` artik kullanilmiyor.
 
 ### 4. Edge Function'i deploy et
 
@@ -85,7 +84,8 @@ https://<your-project-ref>.supabase.co/functions/v1/summarize
 Ardindan distributable extension'i build et:
 
 ```bash
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx ./scripts/build-extension.sh
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx \
+./scripts/build-extension.sh
 ```
 
 ### 6. Chrome'a yukle
@@ -102,11 +102,14 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx ./scripts/build-extension.sh
 - Gunluk ozet hakki server-side hesaplanir.
 - Edge function her API yanitinda `remaining` alanini dondurur.
 - RSS cagirilari tek noktadan background service worker uzerinden yapilir.
+- OpenAI yanitlari Structured Outputs JSON Schema kontratlariyla alinir; ozet, soru-cevap ve taraflilik analizi serbest metin parse etmeye dayanmaz.
+- Semantik kaynak eslestirme, Supabase Postgres `pgvector` ve OpenAI embedding cagrilariyla son 48 saatteki yakin olaylari bulur; Google News RSS yedek kaynak katmani olarak kalir.
 
 ## Guvenlik notlari
 
-- Client tarafinda artik `APP_SECRET` yok; extension sadece publishable key tasir.
-- Supabase gateway once JWT'yi dogrular; edge function ek olarak allowlisted extension origin kontrolu yapar.
+- Extension istekleri allowlisted origin + Supabase Auth Bearer token ile korunur.
+- Chrome extension kodu kullanici cihazinda acik oldugu icin extension icine gomulen client secret degerlerine guvenlik siniri olarak dayanilmaz.
+- Supabase gateway once JWT'yi dogrular; edge function daha sonra allowlisted origin ve rate limit kontrollerini uygular.
 - `ALLOWED_ORIGIN` bos birakilmaz; bos veya hataliysa function fail-closed davranir.
 - AI endpoint'lerinde hem gunluk kota hem de kisa pencere rate limit uygulanir.
 - OpenAI anahtari sadece edge function tarafinda kullanilir.

@@ -4,128 +4,109 @@ import { HttpError } from "./errors.ts";
 
 const EXT_ORIGIN = "chrome-extension://jompmeahomjbfpbkhfokobijnflljkik";
 
-function withOrigin(value: string, fn: () => void | Promise<void>): () => Promise<void> {
+function withEnv(
+  env: Record<string, string>,
+  fn: () => void | Promise<void>,
+): () => Promise<void> {
   return async () => {
-    const prev = Deno.env.get("ALLOWED_ORIGIN");
-    Deno.env.set("ALLOWED_ORIGIN", value);
+    const previous = new Map<string, string | undefined>();
+    for (const [key, value] of Object.entries(env)) {
+      previous.set(key, Deno.env.get(key));
+      Deno.env.set(key, value);
+    }
+
     try {
       await fn();
     } finally {
-      if (prev !== undefined) {
-        Deno.env.set("ALLOWED_ORIGIN", prev);
-      } else {
-        Deno.env.delete("ALLOWED_ORIGIN");
+      for (const [key, value] of previous.entries()) {
+        if (value === undefined) {
+          Deno.env.delete(key);
+        } else {
+          Deno.env.set(key, value);
+        }
       }
     }
   };
 }
 
-Deno.test("verifyRequestSignature: rejects when origin is missing", () => {
-  const req = new Request("https://example.com", {
-    method: "POST",
-    headers: { authorization: "Bearer token-123" },
-  });
-  assertThrows(
-    () => verifyRequestSignature(req, '{"test": true}'),
-    HttpError,
-  );
-});
+function makeRequest(overrides: { authorization?: string; origin?: string } = {}): Request {
+  const headers: Record<string, string> = {
+    authorization: overrides.authorization ?? "Bearer token-123",
+  };
+
+  if (overrides.origin !== "") {
+    headers.origin = overrides.origin ?? EXT_ORIGIN;
+  }
+
+  return new Request("https://example.com", { method: "POST", headers });
+}
 
 Deno.test(
-  "verifyRequestSignature: accepts any origin when wildcard mode is enabled",
-  withOrigin("*", () => {
-    const req = new Request("https://example.com", {
-      method: "POST",
-      headers: {
-        origin: "https://evil.example",
-        authorization: "Bearer token-123",
-      },
-    });
-    const token = verifyRequestSignature(req, '{"test": true}');
+  "verifyRequestSignature: rejects when origin is missing",
+  withEnv({ ALLOWED_ORIGIN: EXT_ORIGIN }, () => {
+    assertThrows(
+      () => verifyRequestSignature(makeRequest({ origin: "" })),
+      HttpError,
+    );
+  }),
+);
+
+Deno.test(
+  "verifyRequestSignature: accepts valid request for allowlisted extension origin",
+  withEnv({ ALLOWED_ORIGIN: EXT_ORIGIN }, () => {
+    const token = verifyRequestSignature(makeRequest());
     assertEquals(token, "token-123");
   }),
 );
 
-Deno.test("verifyRequestSignature: rejects when authorization header is missing", () => {
-  const req = new Request("https://example.com", {
-    method: "POST",
-    headers: { origin: EXT_ORIGIN },
-  });
-  assertThrows(
-    () => verifyRequestSignature(req, '{"test": true}'),
-    HttpError,
-  );
-});
-
-Deno.test("verifyRequestSignature: rejects when bearer token is empty", () => {
-  const req = new Request("https://example.com", {
-    method: "POST",
-    headers: {
-      origin: EXT_ORIGIN,
-      authorization: "Bearer   ",
-    },
-  });
-  assertThrows(
-    () => verifyRequestSignature(req, '{"test": true}'),
-    HttpError,
-  );
-});
-
-Deno.test("verifyRequestSignature: returns bearer token for allowlisted extension origin", () => {
-  const req = new Request("https://example.com", {
-    method: "POST",
-    headers: {
-      origin: EXT_ORIGIN,
-      authorization: "Bearer token-123",
-    },
-  });
-  const token = verifyRequestSignature(req, '{"test": true}');
-  assertEquals(token, "token-123");
-});
-
-Deno.test("verifyRequestSignature: rejects non-allowlisted origin", () => {
-  const req = new Request("https://example.com", {
-    method: "POST",
-    headers: {
-      origin: "https://evil.example",
-      authorization: "Bearer token-123",
-    },
-  });
-  assertThrows(
-    () => verifyRequestSignature(req, '{"test": true}'),
-    HttpError,
-  );
-});
+Deno.test(
+  "verifyRequestSignature: accepts any origin when wildcard mode is enabled",
+  withEnv({ ALLOWED_ORIGIN: "*" }, () => {
+    const token = verifyRequestSignature(makeRequest({ origin: "https://evil.example" }));
+    assertEquals(token, "token-123");
+  }),
+);
 
 Deno.test(
-  "verifyRequestSignature: rejects arbitrary chrome-extension origin not in allowlist",
-  () => {
+  "verifyRequestSignature: rejects when authorization header is missing",
+  withEnv({ ALLOWED_ORIGIN: EXT_ORIGIN }, () => {
     const req = new Request("https://example.com", {
       method: "POST",
-      headers: {
-        origin: "chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        authorization: "Bearer token-123",
-      },
+      headers: { origin: EXT_ORIGIN },
     });
+
     assertThrows(
-      () => verifyRequestSignature(req, '{"test": true}'),
+      () => verifyRequestSignature(req),
       HttpError,
     );
-  },
+  }),
+);
+
+Deno.test(
+  "verifyRequestSignature: rejects when bearer token is empty",
+  withEnv({ ALLOWED_ORIGIN: EXT_ORIGIN }, () => {
+    assertThrows(
+      () => verifyRequestSignature(makeRequest({ authorization: "Bearer   " })),
+      HttpError,
+    );
+  }),
+);
+
+Deno.test(
+  "verifyRequestSignature: rejects non-allowlisted origin",
+  withEnv({ ALLOWED_ORIGIN: EXT_ORIGIN }, () => {
+    assertThrows(
+      () => verifyRequestSignature(makeRequest({ origin: "https://evil.example" })),
+      HttpError,
+    );
+  }),
 );
 
 Deno.test(
   "verifyRequestSignature: rejects all origins when ALLOWED_ORIGIN is empty",
-  withOrigin("", () => {
-    const req = new Request("https://example.com", {
-      method: "POST",
-      headers: {
-        origin: EXT_ORIGIN,
-        authorization: "Bearer token-123",
-      },
-    });
+  withEnv({ ALLOWED_ORIGIN: "" }, () => {
     assertThrows(
-      () => verifyRequestSignature(req, '{"test": true}'),
+      () => verifyRequestSignature(makeRequest()),
       HttpError,
     );
   }),

@@ -19,6 +19,12 @@
   gap: 8px;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .brand-mark {
   width: 28px;
   height: 28px;
@@ -55,7 +61,8 @@
   text-transform: uppercase;
 }
 
-#historyList {
+#historyList,
+#savedList {
   list-style: none;
   display: flex;
   flex-direction: column;

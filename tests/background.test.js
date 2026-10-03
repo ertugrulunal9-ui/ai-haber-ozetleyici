@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-// Extract parseRssItems from background.js by evaluating only the function
+// Extract parseRssItems from rss-fetcher.js by evaluating only the function
 const bgCode = readFileSync(
-  resolve(__dirname, "../extension/background/background.js"),
+  resolve(__dirname, "../extension/background/rss-fetcher.js"),
   "utf-8",
 );
 

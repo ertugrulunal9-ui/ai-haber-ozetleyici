@@ -146,6 +146,32 @@ describe("computeTopSources", () => {
   });
 });
 
+describe("computeTopTopics", () => {
+  const fn = () => globalThis.AozStatsEngine.computeTopTopics;
+
+  it("sorts topics by count descending", () => {
+    const topics = { ekonomi: 2, politika: 5, teknoloji: 3 };
+    const result = fn()(topics, 2);
+    expect(result).toEqual([
+      { name: "politika", count: 5 },
+      { name: "teknoloji", count: 3 },
+    ]);
+  });
+
+  it("sorts equal counts alphabetically", () => {
+    const topics = { zeta: 2, alfa: 2 };
+    const result = fn()(topics, 2);
+    expect(result).toEqual([
+      { name: "alfa", count: 2 },
+      { name: "zeta", count: 2 },
+    ]);
+  });
+
+  it("returns empty for missing topics", () => {
+    expect(fn()(undefined, 5)).toEqual([]);
+  });
+});
+
 describe("computeStreak", () => {
   const fn = () => globalThis.AozStatsEngine.computeStreak;
 
@@ -194,5 +220,161 @@ describe("getSourceBiasLabel", () => {
     expect(result.political).toBe("Merkez-Sağ");
     expect(result.emotional).toBe("Orta");
     expect(result.emotionalValue).toBe(45);
+  });
+});
+
+describe("computeSourceDiversityScore", () => {
+  const fn = () => globalThis.AozStatsEngine.computeSourceDiversityScore;
+
+  it("returns 0 for no sources", () => {
+    expect(fn()({}, 0)).toBe(0);
+  });
+
+  it("keeps single-source diets low", () => {
+    expect(fn()({ "a.com": 5 }, 5)).toBe(20);
+  });
+
+  it("rewards broader balanced source mixes", () => {
+    const narrow = fn()({ "a.com": 8, "b.com": 2 }, 10);
+    const broad = fn()({ "a.com": 2, "b.com": 2, "c.com": 2, "d.com": 2, "e.com": 2 }, 10);
+    expect(broad).toBeGreaterThan(narrow);
+    expect(broad).toBeGreaterThanOrEqual(90);
+  });
+});
+
+describe("computeMediaDietSummary", () => {
+  const fn = () => globalThis.AozStatsEngine.computeMediaDietSummary;
+
+  it("summarizes empty media diet", () => {
+    const result = fn()({ totalArticles: 0, sources: {}, biasReadings: [] }, "en");
+    expect(result.totalArticles).toBe(0);
+    expect(result.uniqueSources).toBe(0);
+    expect(result.emotionalExposure).toBe("unknown");
+    expect(result.summaryText).toContain("Summarize");
+  });
+
+  it("summarizes weekly source and emotional exposure", () => {
+    const result = fn()({
+      totalArticles: 4,
+      sources: { "a.com": 3, "b.com": 1 },
+      clickbaitYes: 3,
+      clickbaitNo: 1,
+      biasReadings: [
+        { emotional: 80 },
+        { emotional: 70 },
+      ],
+    }, "tr");
+
+    expect(result.uniqueSources).toBe(2);
+    expect(result.topSource).toEqual({ name: "a.com", count: 3 });
+    expect(result.emotionalExposure).toBe("high");
+    expect(result.emotionalExposureLabel).toBe("Yüksek duygusal maruziyet");
+    expect(result.clickbait.ratio).toBe(0.75);
+    expect(result.clickbaitExposureLabel).toContain("Yüksek clickbait");
+    expect(result.recommendations.length).toBeGreaterThan(0);
+    expect(result.summaryText).toContain("4 haber");
+  });
+});
+
+describe("computeClickbaitExposure", () => {
+  const fn = () => globalThis.AozStatsEngine.computeClickbaitExposure;
+
+  it("returns null ratio without votes", () => {
+    expect(fn()({ clickbaitYes: 0, clickbaitNo: 0 })).toEqual({
+      yes: 0,
+      no: 0,
+      total: 0,
+      ratio: null,
+    });
+  });
+
+  it("computes yes ratio", () => {
+    expect(fn()({ clickbaitYes: 3, clickbaitNo: 1 })).toEqual({
+      yes: 3,
+      no: 1,
+      total: 4,
+      ratio: 0.75,
+    });
+  });
+});
+
+describe("getMediaDietRecommendations", () => {
+  const fn = () => globalThis.AozStatsEngine.getMediaDietRecommendations;
+
+  it("nudges empty users to build signal", () => {
+    const result = fn()({
+      totalArticles: 0,
+      uniqueSources: 0,
+      sourceDiversityScore: 0,
+      emotionalExposure: "unknown",
+      topSource: null,
+      lang: "en",
+    });
+
+    expect(result[0]).toContain("at least 3 articles");
+  });
+
+  it("recommends alternatives for narrow high-emotion diets", () => {
+    const result = fn()({
+      totalArticles: 5,
+      uniqueSources: 1,
+      sourceDiversityScore: 20,
+      emotionalExposure: "high",
+      clickbait: { ratio: 0.2 },
+      topSource: { name: "a.com", count: 5 },
+      lang: "tr",
+    });
+
+    expect(result).toHaveLength(3);
+    expect(result.join(" ")).toContain("alternatif kaynak");
+    expect(result.join(" ")).toContain("Duygusal ton yüksek");
+    expect(result.join(" ")).toContain("a.com");
+  });
+
+  it("recommends headline comparison for high clickbait exposure", () => {
+    const result = fn()({
+      totalArticles: 5,
+      uniqueSources: 3,
+      sourceDiversityScore: 60,
+      emotionalExposure: "moderate",
+      clickbait: { ratio: 0.8 },
+      topSource: { name: "a.com", count: 2 },
+      lang: "tr",
+    });
+
+    expect(result.join(" ")).toContain("Clickbait maruziyeti yüksek");
+  });
+
+  it("recognizes healthy source variety", () => {
+    const result = fn()({
+      totalArticles: 5,
+      uniqueSources: 5,
+      sourceDiversityScore: 90,
+      emotionalExposure: "moderate",
+      clickbait: { ratio: 0.1 },
+      topSource: { name: "a.com", count: 1 },
+      lang: "tr",
+    });
+
+    expect(result[0]).toContain("kaynak çeşitliliğin sağlıklı");
+  });
+});
+
+describe("buildMediaDietShareText", () => {
+  const fn = () => globalThis.AozStatsEngine.buildMediaDietShareText;
+
+  it("builds a compact weekly share text in English", () => {
+    const result = fn()({
+      totalArticles: 3,
+      sources: { "a.com": 2, "b.com": 1 },
+      topics: { economy: 2, policy: 1 },
+      clickbaitYes: 1,
+      clickbaitNo: 1,
+      biasReadings: [{ emotional: 50 }],
+    }, "en");
+
+    expect(result).toContain("My Weekly Media Diet");
+    expect(result).toContain("3 articles, 2 sources");
+    expect(result).toContain("Top topics: economy, policy");
   });
 });
