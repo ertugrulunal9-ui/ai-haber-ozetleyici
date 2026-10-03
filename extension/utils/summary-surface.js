@@ -163,7 +163,7 @@
     refs.keywordsContainer.classList.remove(hiddenClass);
     keywords.forEach((kw) => {
       const tag = document.createElement("span");
-      tag.className = refs.keywordsContainer.dataset.tagClass || "aoz-keyword-tag";
+      tag.className = refs.keywordsContainer.dataset.tagClass || "keyword-tag";
       tag.textContent = kw;
       refs.keywordsContainer.appendChild(tag);
     });

@@ -125,7 +125,6 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx ./scripts/build-extension.sh
 extension/
 |-- manifest.json
 |-- background/
-|-- content/
 |-- popup/
 `-- utils/
 
