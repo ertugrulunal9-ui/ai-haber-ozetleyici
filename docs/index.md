@@ -1,6 +1,6 @@
 # Privacy Policy — AI Haber Özetleyici (AI News Summarizer)
 
-**Last updated:** 2026-05-30
+**Last updated:** 2026-10-04
 
 ## What Data We Collect
 
@@ -17,6 +17,10 @@
 ### Article Content
 - When you click "Summarize," the article title and text (up to 5,000 characters) from the current page are sent to our server for AI processing.
 - Raw article text is **not stored permanently**. It is forwarded to OpenAI's API for processing and discarded after the response is generated.
+
+### Summary Cache
+- To avoid re-processing the same article, the generated summary and its keywords are stored on our server together with the summary language and a one-way hash (SHA-256) of the article URL.
+- The cache does not contain the raw article text, the URL itself, or any information about who requested the summary. When the same article is summarized again in the same language, the cached summary is returned and does not count toward your daily limit.
 
 ### Semantic Source Matching
 - To find similar recent news events, we may store compact article metadata: title, URL, source host, language, and an embedding vector derived from the title and opening excerpt.
@@ -66,6 +70,7 @@ When fetching related sources, the article title (first 60 characters) is sent t
 - **Clickbait votes** are retained indefinitely to maintain community vote totals.
 - **Summary feedback** is retained indefinitely to help improve summarization quality.
 - **Semantic event metadata and embeddings** may be retained to support recent-event matching and source comparison.
+- **Cached summaries** (summary, keywords, language and URL hash) may be retained so that repeated requests for the same article can be served without re-processing.
 - **Raw article content** is not stored — it is processed in-memory and discarded.
 
 ## Your Rights
