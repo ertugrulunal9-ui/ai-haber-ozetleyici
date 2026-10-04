@@ -40,9 +40,12 @@ if ($background.Contains($placeholder)) {
 }
 
 # Drop the BEGIN/END lines (whatever their dash count) and line breaks.
-$extensionKey = ("$env:EXTENSION_PUBLIC_KEY" -replace "-+\s*(BEGIN|END)[^-]*-+", "") -replace "\s", ""
+# Case-sensitive operators on purpose: the case-insensitive ones fold case
+# with the current culture, and under Turkish "I" no longer matches [A-Za-z]
+# in Windows PowerShell 5.1.
+$extensionKey = ("$env:EXTENSION_PUBLIC_KEY" -creplace "-+\s*(BEGIN|END)[^-]*-+", "") -creplace "\s", ""
 if ($extensionKey) {
-  if ($extensionKey -notmatch "^[A-Za-z0-9+/]{200,}={0,2}$") {
+  if ($extensionKey -cnotmatch "^[A-Za-z0-9+/]{200,}={0,2}$") {
     Write-Error "EXTENSION_PUBLIC_KEY is not a valid base64 public key."
     exit 1
   }
