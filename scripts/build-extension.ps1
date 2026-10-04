@@ -39,8 +39,13 @@ if ($background.Contains($placeholder)) {
   exit 1
 }
 
-$extensionKey = ("$env:EXTENSION_PUBLIC_KEY" -replace "-----[^-]+-----", "") -replace "\s", ""
+# Drop the BEGIN/END lines (whatever their dash count) and line breaks.
+$extensionKey = ("$env:EXTENSION_PUBLIC_KEY" -replace "-+\s*(BEGIN|END)[^-]*-+", "") -replace "\s", ""
 if ($extensionKey) {
+  if ($extensionKey -notmatch "^[A-Za-z0-9+/]{200,}={0,2}$") {
+    Write-Error "EXTENSION_PUBLIC_KEY is not a valid base64 public key."
+    exit 1
+  }
   $manifestFile = Join-Path $distDir "manifest.json"
   $manifest = [IO.File]::ReadAllText($manifestFile)
   $brace = $manifest.IndexOf("{")

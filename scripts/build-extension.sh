@@ -48,7 +48,14 @@ if [[ -n "${EXTENSION_PUBLIC_KEY:-}" ]]; then
   EXTENSION_PUBLIC_KEY="$EXTENSION_PUBLIC_KEY" node -e '
     const fs = require("fs");
     const file = process.argv[1];
-    const key = process.env.EXTENSION_PUBLIC_KEY.replace(/-----[^-]+-----|\s/g, "");
+    // Drop the BEGIN/END lines (whatever their dash count) and line breaks.
+    const key = process.env.EXTENSION_PUBLIC_KEY
+      .replace(/-+\s*(BEGIN|END)[^-]*-+/g, "")
+      .replace(/\s/g, "");
+    if (!/^[A-Za-z0-9+\/]{200,}={0,2}$/.test(key)) {
+      console.error("EXTENSION_PUBLIC_KEY is not a valid base64 public key.");
+      process.exit(1);
+    }
     const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
     fs.writeFileSync(file, JSON.stringify({ key, ...manifest }, null, 2) + "\n");
   ' "$DIST_DIR/manifest.json"
