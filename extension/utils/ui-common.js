@@ -141,6 +141,7 @@
       auth_error_empty: "E-posta ve şifre gerekli.",
       auth_error_invalid: "E-posta veya şifre hatalı.",
       auth_error_generic: "Giriş yapılamadı. Tekrar dene.",
+      auth_error_config: "Eklenti yapılandırması eksik: Supabase anahtarı yok. Build edilmiş dist/extension klasörünü yükleyin.",
       auth_confirm_email: "E-postanı kontrol et — onay bağlantısı gönderdik.",
     },
     en: {
@@ -284,6 +285,7 @@
       auth_error_empty: "Email and password are required.",
       auth_error_invalid: "Incorrect email or password.",
       auth_error_generic: "Could not sign in. Please try again.",
+      auth_error_config: "The extension is not configured: the Supabase key is missing. Load the built dist/extension folder.",
       auth_confirm_email: "Check your email — we sent a confirmation link.",
     },
   };
@@ -347,7 +349,7 @@
       internal_error: t.error_server,
       db_error: t.error_server,
       unauthorized: t.error_unauthorized,
-      auth_config: t.error_unauthorized,
+      auth_config: t.auth_error_config,
       not_article: t.not_article,
       limit: t.daily_limit,
       assistant_limit: t.assistant_limit,

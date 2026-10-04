@@ -31,6 +31,15 @@ function createApiError(code, status = 0, details = null) {
   return error;
 }
 
+// Logs why a sign-in failed (see describeAuthError in auth-manager.js) and
+// replies with the error code so the popup can show a matching message.
+function replyAuthFailure(sendResponse, flow) {
+  return (err) => {
+    console.warn(`${flow}_failed`, describeAuthError(err));
+    sendResponse({ ok: false, error: err?.code || "unauthorized" });
+  };
+}
+
 // ── Chrome alarms ─────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener((details) => {
@@ -79,7 +88,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         await setStoredAuthSession(session);
         sendResponse({ ok: true });
       })
-      .catch((err) => sendResponse({ ok: false, error: err.code || "unauthorized" }));
+      .catch(replyAuthFailure(sendResponse, "email_sign_in"));
     return true;
   }
 
@@ -93,7 +102,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         await setStoredAuthSession(result);
         sendResponse({ ok: true });
       })
-      .catch((err) => sendResponse({ ok: false, error: err.code || "unauthorized" }));
+      .catch(replyAuthFailure(sendResponse, "email_sign_up"));
     return true;
   }
 
@@ -103,7 +112,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         await setStoredAuthSession(session);
         sendResponse({ ok: true });
       })
-      .catch((err) => sendResponse({ ok: false, error: err.code || "unauthorized" }));
+      .catch(replyAuthFailure(sendResponse, "google_sign_in"));
     return true;
   }
 

@@ -18,6 +18,12 @@
       state.refs.authMessage.classList.add("hidden");
     }
 
+    // auth_config means the build has no Supabase publishable key: retrying
+    // cannot help, so say what is wrong instead of the generic message.
+    function _authErrorText(error) {
+      return error === "auth_config" ? state.t.auth_error_config : state.t.auth_error_generic;
+    }
+
     function renderAuthView() {
       _applyAuthMode();
       popupUi.showPopupView(state.refs, "auth");
@@ -49,7 +55,7 @@
       state.refs.authSubmitBtn.disabled = false;
 
       if (!result.ok) {
-        state.refs.authMessage.textContent = state.t.auth_error_generic;
+        state.refs.authMessage.textContent = _authErrorText(result.error);
         state.refs.authMessage.classList.remove("hidden");
         return;
       }
@@ -76,7 +82,7 @@
       state.refs.googleSignInLabel.textContent = state.t.auth_google_btn;
 
       if (!result.ok) {
-        state.refs.authMessage.textContent = state.t.auth_error_generic;
+        state.refs.authMessage.textContent = _authErrorText(result.error);
         state.refs.authMessage.classList.remove("hidden");
         return;
       }

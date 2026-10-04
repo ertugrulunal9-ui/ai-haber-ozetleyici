@@ -45,6 +45,7 @@ describe("getErrorMessage", () => {
     error_ai: "ai",
     error_server: "server",
     error_unauthorized: "unauthorized",
+    auth_error_config: "not configured",
     error_rate_limited: "slow down",
     daily_limit: "daily",
     assistant_limit: "assistant",
@@ -56,8 +57,8 @@ describe("getErrorMessage", () => {
     expect(getErrorMessage()("not_article", t)).toBe("not article");
   });
 
-  it("maps auth_config to unauthorized text", () => {
-    expect(getErrorMessage()("auth_config", t)).toBe("unauthorized");
+  it("maps auth_config to the missing-configuration text", () => {
+    expect(getErrorMessage()("auth_config", t)).toBe("not configured");
   });
 
   it("maps rate_limited explicitly", () => {
