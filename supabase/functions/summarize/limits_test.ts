@@ -53,19 +53,19 @@ function createFakeDb(options: { failRpc?: boolean } = {}) {
 
 function bucketState(deviceRemaining: number): LimitBucketState {
   return {
-    deviceCount: 100 - deviceRemaining,
+    deviceCount: 10 - deviceRemaining,
     deviceRemaining,
     ipKey: "",
     ipCount: 0,
-    ipRemaining: 400,
+    ipRemaining: 40,
   };
 }
 
-function createLimits(summaryRemaining = 100): LimitState {
+function createLimits(summaryRemaining = 10): LimitState {
   return {
     clientIp: IP,
     summary: bucketState(summaryRemaining),
-    assistant: bucketState(100),
+    assistant: bucketState(10),
   };
 }
 
@@ -85,26 +85,26 @@ Deno.test("reserveUsage: consumes device and ip counters and reports remaining",
 
   assertEquals(fake.count(USER), 1);
   assertEquals(fake.count(`ip_${IP}`), 1);
-  assertEquals(next.summary.deviceRemaining, 99);
+  assertEquals(next.summary.deviceRemaining, 9);
 });
 
 Deno.test("reserveUsage: rejects at the device limit without touching the ip counter", async () => {
   const fake = createFakeDb();
-  fake.set(USER, 100);
+  fake.set(USER, 10);
 
   await rejectsWith(() => reserveUsage(usageParams(fake.db)), 429, { error: "limit", remaining: 0 });
-  assertEquals(fake.count(USER), 100);
+  assertEquals(fake.count(USER), 10);
   assertEquals(fake.count(`ip_${IP}`), 0);
 });
 
 Deno.test("reserveUsage: refunds the device counter when the ip limit is hit", async () => {
   const fake = createFakeDb();
-  fake.set(`assistant:ip_${IP}`, 400);
+  fake.set(`assistant:ip_${IP}`, 40);
 
   await rejectsWith(
     () => reserveUsage(usageParams(fake.db, "assistant")),
     429,
-    { error: "assistant_limit", remaining: 100 },
+    { error: "assistant_limit", remaining: 10 },
   );
   assertEquals(fake.count(`assistant:${USER}`), 0);
 });
@@ -112,11 +112,11 @@ Deno.test("reserveUsage: refunds the device counter when the ip limit is hit", a
 Deno.test("reserveUsage: concurrent requests never exceed the daily limit", async () => {
   const fake = createFakeDb();
   const results = await Promise.allSettled(
-    Array.from({ length: 150 }, () => reserveUsage(usageParams(fake.db))),
+    Array.from({ length: 25 }, () => reserveUsage(usageParams(fake.db))),
   );
 
-  assertEquals(results.filter((r) => r.status === "fulfilled").length, 100);
-  assertEquals(fake.count(USER), 100);
+  assertEquals(results.filter((r) => r.status === "fulfilled").length, 10);
+  assertEquals(fake.count(USER), 10);
 });
 
 Deno.test("releaseUsage: gives back the reserved unit", async () => {
@@ -182,7 +182,7 @@ Deno.test("withReservedUsage: keeps the unit and returns remaining on success", 
   const result = await withReservedUsage(handlerContext(fake.db), "summary", () =>
     Promise.resolve({ summary: "ok" }));
 
-  assertEquals(result, { body: { summary: "ok" }, remaining: 99 });
+  assertEquals(result, { body: { summary: "ok" }, remaining: 9 });
   assertEquals(fake.count(USER), 1);
 });
 
@@ -202,7 +202,7 @@ Deno.test("withReservedUsage: refunds the unit when the AI call fails", async ()
 
 Deno.test("handleRelatedSources: daily per-ip cap blocks before any embedding call", async () => {
   const fake = createFakeDb();
-  fake.set(`relatedsources:ip_${IP}`, 400);
+  fake.set(`relatedsources:ip_${IP}`, 40);
   const originalFetch = globalThis.fetch;
   let fetchCalls = 0;
   globalThis.fetch = () => {

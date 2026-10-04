@@ -1,10 +1,10 @@
 import { HttpError } from "./errors.ts";
 import { DbClient, LightweightAction, LimitBucketState, LimitState, UsageBucket } from "./types.ts";
 
-const SUMMARY_DAILY_LIMIT = 100;
-const SUMMARY_IP_DAILY_LIMIT = 400;
-const ASSISTANT_DAILY_LIMIT = 100;
-const ASSISTANT_IP_DAILY_LIMIT = 400;
+const SUMMARY_DAILY_LIMIT = 10;
+const SUMMARY_IP_DAILY_LIMIT = 40;
+const ASSISTANT_DAILY_LIMIT = 10;
+const ASSISTANT_IP_DAILY_LIMIT = 40;
 const AI_BURST_WINDOW_MINUTES = 1;
 const USAGE_BURST_WINDOW_MINUTES = 5;
 
@@ -19,8 +19,8 @@ const LIGHTWEIGHT_IP_LIMITS: Record<LightweightAction, number> = {
   vote: 60,
   feedback: 30,
   getvotes: 120,
-  // One embedding per summary, so this matches SUMMARY_IP_DAILY_LIMIT.
-  relatedsources: 400,
+  // One embedding per summary.
+  relatedsources: SUMMARY_IP_DAILY_LIMIT,
 };
 
 export async function getLimitState(
