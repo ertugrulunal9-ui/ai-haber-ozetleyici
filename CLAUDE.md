@@ -108,6 +108,8 @@ npm run test:watch
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx \
 npm run build:extension
 # → dist/extension/ klasörüne yazar
+# Windows (bash yoksa): scripts/build-extension.ps1
+# Opsiyonel: EXTENSION_PUBLIC_KEY=<store public key> → manifest "key" (sabit eklenti kimliği)
 
 # Local Supabase başlat
 supabase start

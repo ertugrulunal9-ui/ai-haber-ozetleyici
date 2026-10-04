@@ -93,12 +93,36 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx \
 ./scripts/build-extension.sh
 ```
 
+Windows'ta bash yoksa PowerShell ile:
+
+```powershell
+$env:SUPABASE_PUBLISHABLE_KEY = "sb_publishable_xxx"
+powershell -ExecutionPolicy Bypass -File scripts\build-extension.ps1
+```
+
+Publishable key sadece `dist/extension/` icine yazilir. `extension/` klasoru dogrudan yuklenirse giris ve ozet istekleri `auth_config` hatasi verir.
+
+#### Sabit eklenti kimligi (opsiyonel)
+
+Paketlenmemis yuklenen eklentinin kimligi klasor yoluna gore degisir. Google girisi (`https://<id>.chromiumapp.org/`) ve `ALLOWED_ORIGIN` bu kimlige bagli oldugu icin, yerel build'lerde store kimligini kullanmak icin store'un public key'ini verin:
+
+1. Chrome Web Store Developer Dashboard > eklenti > Package > **View public key**
+2. Build sirasinda `EXTENSION_PUBLIC_KEY` olarak verin (BEGIN/END satirlari ve satir sonlari otomatik temizlenir):
+
+```bash
+EXTENSION_PUBLIC_KEY="MIIBIjANBg..." SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx ./scripts/build-extension.sh
+```
+
+Build, key'i `dist/extension/manifest.json` icine `"key"` olarak ekler. Store'a yuklenecek zip icin bu degiskeni vermeyin; store kimligi zaten sabittir.
+
 ### 6. Chrome'a yukle
 
 1. `chrome://extensions` ac
 2. Gelistirici modunu ac
 3. `Paketlenmemis oge yukle` sec
 4. `dist/extension/` klasorunu sec
+
+Google girisi icin Supabase > Authentication > URL Configuration > Redirect URLs listesinde kullanilan her eklenti kimligi icin `https://<id>.chromiumapp.org/**` bulunmalidir. Giris basarisiz olursa nedeni eklentinin service worker konsolunda `google_sign_in_failed` satirinda yazar.
 
 ## Runtime davranisi
 

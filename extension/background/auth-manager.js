@@ -63,6 +63,9 @@ async function signUpWithEmail(email, password) {
 }
 
 async function signInWithGoogle() {
+  // Read the publishable key first: without it the code exchange below cannot
+  // succeed, so fail before the user goes through the Google window.
+  const headers = await getAuthHeaders();
   const redirectUrl = chrome.identity.getRedirectURL();
   const { codeVerifier, codeChallenge } = await generatePkceChallenge();
 
@@ -73,37 +76,56 @@ async function signInWithGoogle() {
     code_challenge_method: "S256",
   });
 
-  const authUrl = `${getSupabaseAuthUrl("/authorize")}?${params}`;
+  const responseUrl = await launchGoogleAuthWindow(`${getSupabaseAuthUrl("/authorize")}?${params}`);
+  const url = new URL(responseUrl);
+  const hash = new URLSearchParams(url.hash.slice(1));
+  const providerError =
+    url.searchParams.get("error_description") || url.searchParams.get("error") ||
+    hash.get("error_description") || hash.get("error");
+  if (providerError) {
+    throw createApiError("auth_provider", 0, { message: providerError });
+  }
 
+  const code = url.searchParams.get("code");
+  if (!code) {
+    throw createApiError("auth_no_code", 0, { message: `no code in redirect to ${url.origin}${url.pathname}` });
+  }
+
+  const tokenResponse = await fetch(getSupabaseAuthUrl("/token?grant_type=pkce"), {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ auth_code: code, code_verifier: codeVerifier }),
+  });
+  const payload = await parseJson(tokenResponse);
+  if (!tokenResponse.ok) {
+    throw createApiError("unauthorized", tokenResponse.status, payload);
+  }
+
+  return normalizeAuthSession(payload);
+}
+
+function launchGoogleAuthWindow(authUrl) {
   return new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, async (responseUrl) => {
-      if (chrome.runtime.lastError || !responseUrl) {
-        reject(createApiError("unauthorized"));
+    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (responseUrl) => {
+      const chromeError = chrome.runtime.lastError?.message;
+      if (chromeError || !responseUrl) {
+        reject(createApiError("auth_cancelled", 0, { message: chromeError || "no redirect URL" }));
         return;
       }
-      try {
-        const url = new URL(responseUrl);
-        const code = url.searchParams.get("code");
-        if (!code) {
-          reject(createApiError("unauthorized"));
-          return;
-        }
-        const tokenResponse = await fetch(getSupabaseAuthUrl("/token?grant_type=pkce"), {
-          method: "POST",
-          headers: await getAuthHeaders(),
-          body: JSON.stringify({ auth_code: code, code_verifier: codeVerifier }),
-        });
-        const payload = await parseJson(tokenResponse);
-        if (!tokenResponse.ok) {
-          reject(createApiError("unauthorized", tokenResponse.status, payload));
-          return;
-        }
-        resolve(normalizeAuthSession(payload));
-      } catch {
-        reject(createApiError("unauthorized"));
-      }
+      resolve(responseUrl);
     });
   });
+}
+
+// A loggable summary of a sign-in failure. Error payloads from Supabase Auth
+// carry messages and codes only, never tokens.
+function describeAuthError(error) {
+  const details = error?.details;
+  return {
+    code: error?.code || "unknown",
+    status: error?.status || 0,
+    message: details?.message || details?.error_description || details?.msg || details?.error || error?.message || "",
+  };
 }
 
 async function signOut() {
